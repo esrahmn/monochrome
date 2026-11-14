@@ -1,0 +1,19 @@
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# QML / Quickshell specific
+.qmlls.ini
+build/
+*.user
+*.log
+
+# Local environment / secrets
+.env
+*.local

@@ -1,0 +1,419 @@
+import QtQuick
+import QtQuick.Effects
+import QtQuick.Layouts
+import Quickshell
+import Quickshell.Widgets
+import "../../core"
+import "../../shared/components"
+
+// The wallpaper picker, as a body of the island. No window and no frame of its own.
+// Hovering a thumbnail previews it full screen behind the island (WallpaperPreview), sliding in
+// the direction you moved. Clicking one keeps it and the island closes. The keyboard works too:
+//   Left/Right or H/L  previous / next     Enter  keep     Esc  cancel
+//   Home / End  first / last               R  shuffle      M  monochrome
+//
+// The strip never reflows: every thumbnail has the same fixed cell, the selected one only scales up
+// in place, and the strip glides so the selection stays in the middle. Nothing jumps while you pick.
+Item {
+    id: root
+
+    property string panelScreen: ""
+
+    readonly property int wpWidth: 880
+    readonly property int wpStripHeight: 128
+    readonly property int wpControlsHeight: 32
+    readonly property int wpCloseDelay: 170
+    readonly property int wpCellWidth: 172
+    readonly property int wpThumbWidth: 160
+    readonly property int wpThumbHeight: 100
+    readonly property int wpBadgeHeight: 18
+    readonly property real wpPickedScale: 1.08
+
+    implicitWidth: wpWidth
+    implicitHeight: Theme.space16 * 2 + wpControlsHeight + Theme.space12 + wpStripHeight
+
+    property string folder: ""
+    property string selPath: ""
+    property string previousWallpaper: ""
+    property bool keeping: false
+    property real wheelAcc: 0
+    // The thumbnail under the pointer. While set, it is what the desktop previews instead of selPath.
+    property string hoverPath: ""
+    // The strip glides only once it has settled in place, so opening does not scroll from the start.
+    property bool stripAnimated: false
+
+    readonly property var folders: {
+        const seen = {};
+        const out = [];
+        for (const p of Sys.wallpapers) {
+            const d = dirOf(p);
+            if (!seen[d]) { seen[d] = true; out.push(d); }
+        }
+        return out;
+    }
+
+    // The list the strip shows. It is replaced only when its contents really change: the wallpaper list
+    // is reloaded every time the picker opens, and handing the strip an identical new array would reset it.
+    property var pics: []
+    readonly property int selIndex: pics.indexOf(selPath)
+
+    function rebuildPics() {
+        const next = folder === "" ? Sys.wallpapers : Sys.wallpapers.filter(p => dirOf(p) === folder);
+        const same = next.length === pics.length && next.every((p, i) => p === pics[i]);
+        if (!same) pics = next;
+    }
+    onFolderChanged: rebuildPics()
+    onPicsChanged: {
+        stripAnimated = false;
+        Qt.callLater(() => { root.syncStrip(); root.stripAnimated = true; });
+    }
+
+    function dirOf(p) { return p.substring(0, p.lastIndexOf("/")); }
+    function baseOf(p) { return p.substring(p.lastIndexOf("/") + 1); }
+
+    function select(p) {
+        if (keeping) return;
+        selPath = p;
+        hoverPath = "";
+        previewTimer.restart();
+        keys.forceActiveFocus();
+    }
+    // Pointer moved onto a thumbnail ("" = left the strip). The debounce keeps the desktop from
+    // flickering back to the selection while the pointer crosses from one thumbnail to the next.
+    function hover(p) {
+        if (keeping || hoverPath === p) return;
+        hoverPath = p;
+        previewTimer.restart();
+    }
+    function step(d) {
+        if (pics.length === 0) return;
+        let i = selIndex;
+        if (i < 0) i = d > 0 ? -1 : pics.length;
+        i = Math.max(0, Math.min(pics.length - 1, i + d));
+        if (pics[i] !== selPath) select(pics[i]);
+    }
+    function shuffle() {
+        if (pics.length === 0) return;
+        if (pics.length === 1) { select(pics[0]); return; }
+        let p = selPath;
+        while (p === selPath) p = pics[Math.floor(Math.random() * pics.length)];
+        select(p);
+    }
+    function setFolder(f) {
+        folder = f;
+        if (pics.indexOf(selPath) < 0 && pics.length > 0) select(pics[0]);
+    }
+    function syncStrip() {
+        strip.currentIndex = selIndex;
+        if (selIndex >= 0) strip.positionViewAtIndex(selIndex, ListView.Center);
+    }
+
+    // Keep: apply the wallpaper, wait until the desktop has really loaded it (so closing the preview
+    // does not flash the old one), then close. If it fails to load, the previous wallpaper comes back.
+    function keep() {
+        if (keeping) return;
+        if (selPath === "") { Sys.wallpaperOpen = false; return; }
+        keeping = true;
+        previousWallpaper = Sys.wallpaper;
+        if (selPath !== Sys.wallpaper) {
+            Sys.wallpaper = selPath;
+            readyTimeout.restart();
+            if (Sys.wallpaperReady) finishKeep();
+            return;
+        }
+        finishKeep();
+    }
+    function finishKeep() {
+        if (!keeping || Sys.wallpaper !== selPath) return;
+        readyTimeout.stop();
+        Sys.saveState("wallpaper", selPath);
+        keeping = false;
+        closeTimer.restart();
+    }
+    function failKeep() {
+        if (!keeping) return;
+        readyTimeout.stop();
+        keeping = false;
+        if (Sys.wallpaper === selPath) Sys.wallpaper = previousWallpaper;
+        Quickshell.execDetached(["notify-send", "-a", "Wallpaper", "-u", "critical",
+            "Wallpaper failed to load", "Previous wallpaper restored. Check the image file you selected."]);
+    }
+
+    Timer {
+        id: previewTimer
+        interval: Settings.wallpaperPreviewDebounceMs
+        onTriggered: Sys.wallpaperPreview = root.hoverPath !== "" ? root.hoverPath : root.selPath
+    }
+    Timer { id: closeTimer; interval: root.wpCloseDelay; onTriggered: Sys.wallpaperOpen = false }
+    Timer {
+        id: readyTimeout
+        interval: Settings.wallpaperReadyTimeoutMs
+        onTriggered: {
+            if (Sys.wallpaperLoadError === "" && Sys.wallpaperReadyScreens.length > 0) root.finishKeep();
+            else root.failKeep();
+        }
+    }
+
+    onSelIndexChanged: strip.currentIndex = selIndex
+
+    Connections {
+        target: Sys
+        function onWallpapersChanged() {
+            root.rebuildPics();
+            if (root.selPath === "" && Sys.wallpapers.length > 0) root.select(Sys.wallpapers[0]);
+        }
+        function onWallpaperReadyChanged() {
+            if (root.keeping && Sys.wallpaperReady) root.finishKeep();
+        }
+        function onWallpaperLoadErrorChanged() {
+            if (root.keeping && Sys.wallpaperLoadError === root.selPath) root.failKeep();
+        }
+        function onWallpaperOpenChanged() {
+            if (Sys.wallpaperOpen) return;
+            // Closed without finishing: undo a half-applied Keep.
+            if (root.keeping && Sys.wallpaper === root.selPath) Sys.wallpaper = root.previousWallpaper;
+            root.keeping = false;
+            readyTimeout.stop();
+            closeTimer.stop();
+            previewTimer.stop();
+        }
+    }
+
+    Component.onCompleted: {
+        folder = "";
+        rebuildPics();
+        selPath = Sys.wallpaper !== "" ? Sys.wallpaper : (Sys.wallpapers.length > 0 ? Sys.wallpapers[0] : "");
+        Sys.wallpaperPreview = selPath;
+        keys.forceActiveFocus();
+        Qt.callLater(() => { root.syncStrip(); root.stripAnimated = true; });
+    }
+
+    Item {
+        id: keys
+        focus: true
+        anchors.fill: parent
+        Keys.onPressed: (e) => {
+            switch (e.key) {
+            case Qt.Key_Escape: Sys.wallpaperOpen = false; break;
+            case Qt.Key_Return:
+            case Qt.Key_Enter:  root.keep(); break;
+            case Qt.Key_Left:
+            case Qt.Key_H:      root.step(-1); break;
+            case Qt.Key_Right:
+            case Qt.Key_L:      root.step(1); break;
+            case Qt.Key_Home:   if (root.pics.length) root.select(root.pics[0]); break;
+            case Qt.Key_End:    if (root.pics.length) root.select(root.pics[root.pics.length - 1]); break;
+            case Qt.Key_R:      root.shuffle(); break;
+            case Qt.Key_M:      Sys.setWallpaperMono(!Sys.wallpaperMono); break;
+            default: return;
+            }
+            e.accepted = true;
+        }
+    }
+
+    ColumnLayout {
+        anchors { fill: parent; margins: Theme.space16 }
+        spacing: Theme.space12
+
+        RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.wpControlsHeight
+            spacing: Theme.space16
+
+            Text {
+                Layout.maximumWidth: Settings.wallpaperPillTextMaxWidth
+                elide: Text.ElideMiddle
+                text: root.baseOf(root.selPath).replace(/\.[^.]+$/, "")
+                color: Theme.text
+                font.family: Theme.font; font.pixelSize: Theme.fontMd; font.weight: Theme.weightSemibold
+            }
+
+            Chip {
+                label: "All"
+                selected: root.folder === ""
+                onTapped: root.setFolder("")
+            }
+            Repeater {
+                model: root.folders.length > 1 ? root.folders.slice(0, 4) : []
+                delegate: Chip {
+                    required property string modelData
+                    label: root.baseOf(modelData)
+                    selected: root.folder === modelData
+                    onTapped: root.setFolder(modelData)
+                }
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Text {
+                visible: root.pics.length > 0
+                text: (root.selIndex >= 0 ? (root.selIndex + 1) + " of " : "") + root.pics.length
+                color: Theme.faint
+                font.family: Theme.font; font.pixelSize: Theme.fontSm
+                font.features: ({ "tnum": 1 })
+            }
+            Chip {
+                label: "Monochrome"
+                on: Sys.wallpaperMono
+                onTapped: Sys.setWallpaperMono(!Sys.wallpaperMono)
+            }
+            Chip {
+                label: "Shuffle"
+                onTapped: root.shuffle()
+            }
+            Chip {
+                label: "Cancel"
+                onTapped: Sys.wallpaperOpen = false
+            }
+            Chip {
+                label: "Keep"
+                strong: true
+                onTapped: root.keep()
+            }
+        }
+
+        ListView {
+            id: strip
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.wpStripHeight
+            orientation: ListView.Horizontal
+            spacing: 0
+            clip: true
+            model: root.pics
+            // Selection moves it (keys, wheel, click); dragging it would fight the selection.
+            interactive: false
+            boundsBehavior: Flickable.StopAtBounds
+            cacheBuffer: root.wpCellWidth * 6
+            // The selected thumbnail stays in the middle and the strip glides to follow it.
+            highlightRangeMode: ListView.StrictlyEnforceRange
+            preferredHighlightBegin: (width - root.wpCellWidth) / 2
+            preferredHighlightEnd: (width + root.wpCellWidth) / 2
+            highlightMoveDuration: root.stripAnimated ? 280 : 0
+            highlightMoveVelocity: -1
+
+            // The wheel steps through the wallpapers instead of scrolling the strip.
+            WheelHandler {
+                onWheel: (e) => {
+                    root.wheelAcc += e.angleDelta.y;
+                    if (root.wheelAcc <= -120) { root.wheelAcc = 0; root.step(1); }
+                    else if (root.wheelAcc >= 120) { root.wheelAcc = 0; root.step(-1); }
+                }
+            }
+
+            delegate: Item {
+                id: cell
+                required property string modelData
+                readonly property bool picked: modelData === root.selPath
+                readonly property bool live: modelData === Sys.wallpaper
+                // Fixed size: the layout never changes, only how the thumbnail is drawn.
+                width: root.wpCellWidth
+                height: ListView.view.height
+
+                ClippingRectangle {
+                    id: frame
+                    anchors.centerIn: parent
+                    width: root.wpThumbWidth
+                    height: root.wpThumbHeight
+                    radius: Theme.radiusCard
+                    color: Theme.tile
+                    border.width: cell.picked ? 2 : 1
+                    border.color: cell.picked ? Theme.text : Theme.line
+                    scale: cell.picked ? root.wpPickedScale : 1
+                    opacity: (cell.picked || cellArea.containsMouse) ? 1.0 : Theme.opacityDim
+                    Behavior on scale { Tween { duration: Theme.durBase } }
+                    Behavior on opacity { Tween { duration: Theme.durFast } }
+
+                    Image {
+                        id: thumb
+                        anchors.fill: parent
+                        property bool useOrig: false
+                        readonly property int ver: Sys.thumbsVersion
+                        onVerChanged: if (useOrig) useOrig = false
+                        source: useOrig ? "file://" + cell.modelData : "file://" + Sys.thumbFor(cell.modelData)
+                        onStatusChanged: if (status === Image.Error && !useOrig) useOrig = true
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        sourceSize.width: 380
+                        layer.enabled: Sys.wallpaperMono
+                        layer.effect: MultiEffect { saturation: -1.0 }
+                    }
+
+                    Rectangle {
+                        visible: cell.live
+                        anchors.left: parent.left
+                        anchors.bottom: parent.bottom
+                        anchors.margins: Theme.space8
+                        width: curText.implicitWidth + 12
+                        height: root.wpBadgeHeight
+                        radius: Math.min(width, height) / 2
+                        color: Theme.scrim
+                        Text {
+                            id: curText
+                            anchors.centerIn: parent
+                            text: "Current"
+                            color: Theme.text
+                            font.family: Theme.font; font.pixelSize: Theme.fontXs; font.weight: Theme.weightMedium
+                        }
+                    }
+                }
+
+                MouseArea {
+                    id: cellArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    // Only real pointer motion previews: the strip gliding under a resting pointer
+                    // (arrow keys, wheel) must not take the preview away from the keyboard selection.
+                    onPositionChanged: root.hover(cell.modelData)
+                    onExited: if (root.hoverPath === cell.modelData) root.hover("")
+                    onClicked: { root.select(cell.modelData); root.keep(); }
+                }
+            }
+        }
+    }
+
+    Text {
+        visible: root.pics.length === 0
+        anchors.centerIn: parent
+        horizontalAlignment: Text.AlignHCenter
+        text: "No images yet.\nPut wallpapers in ~/Pictures/Wallpapers"
+        color: Theme.dim
+        font.family: Theme.font; font.pixelSize: Theme.fontMd
+    }
+
+    component Chip: Item {
+        readonly property int wpChipDefaultHeight: 30
+        id: chip
+        property string label: ""
+        property bool selected: false
+        property bool strong: false
+        property bool on: false
+        signal tapped()
+        readonly property bool underlined: selected || strong
+        readonly property bool bright: underlined || on || chipArea.containsMouse
+        implicitWidth: chipText.implicitWidth + 4
+        implicitHeight: wpChipDefaultHeight
+        Text {
+            id: chipText
+            anchors.centerIn: parent
+            text: chip.label
+            color: chip.bright ? Theme.text : Theme.dim
+            font.family: Theme.font; font.pixelSize: Theme.fontSm
+            font.weight: chip.strong ? Theme.weightSemibold : Theme.weightMedium
+            Behavior on color { TweenColor { duration: Theme.durFast } }
+        }
+        Rectangle {
+            anchors { left: chipText.left; right: chipText.right; top: chipText.bottom; topMargin: Theme.space2 }
+            height: Theme.borderThin
+            color: Theme.text
+            visible: chip.underlined
+        }
+        MouseArea {
+            id: chipArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: chip.tapped()
+        }
+    }
+}

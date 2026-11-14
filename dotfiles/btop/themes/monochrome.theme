@@ -1,0 +1,70 @@
+# btop monochrome theme
+# Palet: #3c3c3c (gelap) -> #909090 -> #c8c8c8 -> #e6e6e6 (terang)
+
+# Background: kosong = ikut background terminal (transparan)
+theme[main_bg]=""
+
+# Teks utama
+theme[main_fg]="#c8c8c8"
+theme[title]="#e6e6e6"
+theme[hi_fg]="#ffffff"
+
+# Baris yang dipilih di daftar proses
+theme[selected_bg]="#3c3c3c"
+theme[selected_fg]="#ffffff"
+
+# Teks nonaktif dan teks di dalam grafik
+theme[inactive_fg]="#5a5a5a"
+theme[graph_text]="#909090"
+
+# Latar meter/progress bar dan teks proc tambahan
+theme[meter_bg]="#3c3c3c"
+theme[proc_misc]="#909090"
+
+# Garis kotak (semua sama)
+theme[cpu_box]="#909090"
+theme[mem_box]="#909090"
+theme[net_box]="#909090"
+theme[proc_box]="#909090"
+theme[div_line]="#3c3c3c"
+
+# Gradasi suhu
+theme[temp_start]="#909090"
+theme[temp_mid]="#c8c8c8"
+theme[temp_end]="#ffffff"
+
+# Gradasi CPU
+theme[cpu_start]="#909090"
+theme[cpu_mid]="#c8c8c8"
+theme[cpu_end]="#ffffff"
+
+# Gradasi memori
+theme[free_start]="#5a5a5a"
+theme[free_mid]="#909090"
+theme[free_end]="#c8c8c8"
+
+theme[cached_start]="#5a5a5a"
+theme[cached_mid]="#909090"
+theme[cached_end]="#c8c8c8"
+
+theme[available_start]="#5a5a5a"
+theme[available_mid]="#909090"
+theme[available_end]="#c8c8c8"
+
+theme[used_start]="#909090"
+theme[used_mid]="#c8c8c8"
+theme[used_end]="#ffffff"
+
+# Gradasi jaringan
+theme[download_start]="#5a5a5a"
+theme[download_mid]="#909090"
+theme[download_end]="#c8c8c8"
+
+theme[upload_start]="#5a5a5a"
+theme[upload_mid]="#909090"
+theme[upload_end]="#c8c8c8"
+
+# Gradasi proses
+theme[process_start]="#909090"
+theme[process_mid]="#c8c8c8"
+theme[process_end]="#ffffff"
