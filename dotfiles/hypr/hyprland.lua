@@ -25,8 +25,6 @@ if is_file_exists(HOME .. "/.config/hypr/custom/keybinds.lua") then
     require("custom.keybinds")
 end
 
-require("hyprland-gui")
-
 if is_file_exists(HOME .. "/.config/hypr/custom/macmono-generated.lua") then
     require("custom.macmono-generated")
 end
