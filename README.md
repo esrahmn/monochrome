@@ -15,7 +15,7 @@ A personal dotfiles collection built around a clean Hyprland setup and a feature
 - [Highlights](#highlights)
 - [Repository layout](#repository-layout)
 - [Requirements](#requirements)
-- [Getting started](#getting-started)
+- [Installation](#installation)
 - [Configuration notes](#configuration-notes)
 - [License](#license)
 
@@ -32,48 +32,55 @@ A personal dotfiles collection built around a clean Hyprland setup and a feature
 ## Repository layout
 
 ```text
-dotfiles/
-├── alacritty/                 Alacritty configuration
-├── btop/                      btop configuration and themes
-├── cava/                      Cava configuration, themes, and shaders
-├── fish/                      Fish shell configuration
-├── hypr/                      Hyprland Lua modules and helper scripts
-├── kitty/                     Kitty configuration and theme
-└── quickshell/macmono/        Quickshell shell and desktop features
+.
+├── install.sh                  Interactive installer
+└── dotfiles/
+    ├── alacritty/              Alacritty configuration
+    ├── btop/                   btop configuration and themes
+    ├── cava/                   Cava configuration, themes, and shaders
+    ├── fish/                   Fish shell configuration
+    ├── hypr/                   Hyprland Lua modules and helper scripts
+    ├── kitty/                  Kitty configuration and theme
+    └── quickshell/macmono/     Quickshell shell and desktop features
 ```
 
 ## Requirements
 
 - Linux running a Wayland session with **Hyprland**.
 - **Quickshell** for the `macmono` desktop shell.
-- Some panels and scripts call system utilities such as `hyprctl`, `hypridle`, `wl-paste`, `cliphist`, `grim`, `cava`, `brightnessctl`, and `nmcli`. Install the tools required by the features you plan to use.
+- **Bash 4 or newer** and standard command-line utilities for the installer.
+- Some panels and scripts call tools such as `hyprctl`, `hypridle`, `wl-paste`, `cliphist`, `grim`, `cava`, `brightnessctl`, and `nmcli`. Install the tools required by the features you plan to use.
 
-This is a personal configuration, not a one-click installer. The repository does not currently include an installation script or a complete dependency manifest.
+## Installation
 
-## Getting started
-
-Clone the repository and review the configuration before copying anything into your home directory:
+Clone the repository, then start the interactive installer from its root directory:
 
 ```sh
 git clone https://github.com/esrahmn/monochrome.git
 cd monochrome
+./install.sh
 ```
 
-Back up your existing configuration first, then selectively merge the directories under `dotfiles/` into their matching locations in `~/.config/`. For example, the Quickshell files under `dotfiles/quickshell/macmono/` belong at `~/.config/quickshell/macmono/`.
+Use the menu to select the components you want. Before copying files, the installer shows the destinations and asks you to confirm. Existing configuration directories are backed up under `~/.local/state/monochrome/backups/` by default. If `XDG_STATE_HOME` is set, the installer uses `$XDG_STATE_HOME/monochrome/backups/` instead.
 
-Once the Quickshell files are in place, start the shell with:
+The installer merges selected files into `${XDG_CONFIG_HOME:-~/.config}`. It does not delete unrelated files, install system packages, or start services. Symlinked destination paths are refused to avoid writing through them. To inspect the plan without changing files, run:
+
+```sh
+./install.sh --dry-run
+```
+
+After installing Quickshell and its dependencies, start the desktop shell with:
 
 ```sh
 qs -c macmono
 ```
 
-Do not blindly replace your existing `~/.config` or Hyprland setup. The Hyprland configuration here is split into Lua modules; check that your current setup supports that format before enabling it.
-
 ## Configuration notes
 
-- Review monitor scale, keyboard layout, keybinds, and application preferences before using the Hyprland configuration. Some defaults may not match your hardware or workflow.
-- `dotfiles/fish/config.fish` sources CachyOS's Fish configuration. Remove or adapt that line if you are not using CachyOS.
-- Several Quickshell features depend on optional system services and command-line tools. Missing utilities may disable only the related feature, but check the scripts before adapting them to another distribution.
+- The Hyprland files use Lua modules and are not a standard standalone `hyprland.conf`. Check that your setup supports this format before selecting that component.
+- Review monitor scale, keyboard layout, keybinds, and application preferences before using the Hyprland configuration. Defaults may not match your hardware or workflow.
+- The Fish config sources CachyOS-specific configuration. Adapt that line if you are using another distribution.
+- Missing system utilities may disable only the related feature. Review the scripts before adapting them to another distribution.
 
 ## License
 
