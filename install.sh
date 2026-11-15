@@ -217,6 +217,40 @@ short_path() {
   fi
 }
 
+term_width() {
+  local width=""
+  if [[ -t 1 ]] && command -v tput >/dev/null 2>&1; then
+    width="$(tput cols 2>/dev/null || true)"
+  fi
+  [[ "$width" =~ ^[0-9]+$ ]] || width="${COLUMNS:-}"
+  [[ "$width" =~ ^[0-9]+$ ]] || width=80
+  printf '%s' "$width"
+}
+
+compact_path() {
+  local path=$1 max=$2 base lead candidate
+  if ((${#path} <= max)); then
+    printf '%s' "$path"
+    return
+  fi
+  base="${path##*/}"
+  lead="${path%/*}"
+  while [[ "$lead" == */* ]] && ((${#lead} + ${#base} + 3 > max)); do
+    lead="${lead%/*}"
+  done
+  candidate="$lead/…/$base"
+  if ((${#candidate} <= max)); then
+    printf '%s' "$candidate"
+    return
+  fi
+  candidate="…/$base"
+  if ((${#candidate} <= max)); then
+    printf '%s' "$candidate"
+    return
+  fi
+  printf '…%s' "${path: -$((max - 1))}"
+}
+
 set_all() {
   local key value=$1
   for key in "${KEYS[@]}"; do
@@ -537,26 +571,61 @@ trap 'printf "\n  %sInstallation failed.%s Partial files may remain; backup: %s\
 
 print_banner() {
   local -a lines=()
-  printf '\n'
+  local cols width padding margin content path_max configs distro divider dry i
+  cols="$(term_width)"
+  margin=2
+  padding=3
+  if ((cols < 56)); then
+    margin=1
+    padding=1
+  fi
+  if ((cols < 40)); then
+    margin=0
+  fi
+  width=$((cols - 2 * margin))
+  ((width > 64)) && width=64
+  ((width < 24)) && width=24
+  content=$((width - 2 - 2 * padding))
+  ((content < 16)) && content=16
+  path_max=$((content - 10))
+  ((path_max < 8)) && path_max=8
+  configs="$(compact_path "$(short_path "$CONFIG_HOME")" "$path_max")"
+  if ((content >= 34)); then
+    distro="$DISTRO_NAME ($DISTRO_FAMILY${PKG_MANAGER:+ · $PKG_MANAGER})"
+  elif ((content >= 25)); then
+    distro="$DISTRO_FAMILY${PKG_MANAGER:+ · $PKG_MANAGER}"
+  else
+    distro="$DISTRO_FAMILY"
+  fi
+  divider=""
+  for ((i = 0; i < 24 && i < content; i++)); do
+    divider+="─"
+  done
+  if ((content >= 30)); then
+    dry='dry run   no files will be written'
+  else
+    dry='dry run   no writes'
+  fi
 
+  printf '\n'
   if [[ -n "$GUM_BIN" ]]; then
     lines+=("$("$GUM_BIN" style --bold --foreground 255 'M O N O C H R O M E')")
     lines+=("$("$GUM_BIN" style --foreground 244 'dotfiles installer')")
-    lines+=("$("$GUM_BIN" style --foreground 238 '────────────────────────')")
-    lines+=("$("$GUM_BIN" style --foreground 244 "configs   $(short_path "$CONFIG_HOME")")")
-    lines+=("$("$GUM_BIN" style --foreground 244 "distro    $DISTRO_NAME ($DISTRO_FAMILY${PKG_MANAGER:+ · $PKG_MANAGER})")")
+    lines+=("$("$GUM_BIN" style --foreground 238 "$divider")")
+    lines+=("$("$GUM_BIN" style --foreground 244 "configs   $configs")")
+    lines+=("$("$GUM_BIN" style --foreground 244 "distro    $distro")")
     if ((DRY_RUN)); then
-      lines+=("$("$GUM_BIN" style --foreground 214 'dry run   no files will be written')")
+      lines+=("$("$GUM_BIN" style --foreground 214 "$dry")")
     fi
     printf '%s\n' "${lines[@]}" | "$GUM_BIN" style --border rounded \
-      --border-foreground 240 --padding '1 3' --margin '0 2' --width 56 --align center
+      --border-foreground 240 --padding "1 $padding" --margin "0 $margin" --width "$width" --align center
   else
     printf '   %sM O N O C H R O M E%s\n' "$C_BOLD" "$C_RESET"
     printf '   %sdotfiles installer%s\n\n' "$C_DIM" "$C_RESET"
-    printf '   %sconfigs → %s%s\n' "$C_DIM" "$(short_path "$CONFIG_HOME")" "$C_RESET"
-    printf '   %sdistro  → %s (%s%s)%s\n' "$C_DIM" "$DISTRO_NAME" "$DISTRO_FAMILY" "${PKG_MANAGER:+ · $PKG_MANAGER}" "$C_RESET"
+    printf '   %sconfigs → %s%s\n' "$C_DIM" "$configs" "$C_RESET"
+    printf '   %sdistro  → %s%s\n' "$C_DIM" "$distro" "$C_RESET"
     if ((DRY_RUN)); then
-      printf '   %sdry run — no files will be written%s\n' "$C_YELLOW" "$C_RESET"
+      printf '   %s%s%s\n' "$C_YELLOW" "$dry" "$C_RESET"
     fi
   fi
   printf '\n'
