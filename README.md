@@ -50,28 +50,16 @@ A personal dotfiles collection built around a clean Hyprland setup and a feature
 
 - Linux running a Wayland session with **Hyprland**.
 - **Quickshell** for the `macmono` desktop shell.
-- **Bash 4 or newer** and standard command-line utilities for the installer.
-- **gum** for the interactive installer menu; it is installed automatically when missing.
 - Some panels and scripts call tools such as `hyprctl`, `hypridle`, `wl-paste`, `cliphist`, `grim`, `cava`, `brightnessctl`, and `nmcli`. Install the tools required by the features you plan to use.
 
 ## Installation
 
-Clone the repository, then start the interactive installer from its root directory:
+Clone the repository, then run the installer from its root directory:
 
 ```sh
 git clone https://github.com/esrahmn/monochrome.git
 cd monochrome
 ./install.sh
-```
-
-Every component is selected by default. Toggle what you need, press Enter, and confirm the plan. Existing destinations are backed up to `~/.local/state/monochrome/backups/` (or `$XDG_STATE_HOME/monochrome/backups/`) before they are replaced, while your files in `hypr/custom/` and an existing `fish/fish_variables` are kept.
-
-Before touching any config, the installer reads `/etc/os-release` to detect your distribution and package manager (`pacman`, `apt-get`, `dnf`, or `zypper`), checks the binaries required by the selected components, and offers to install the missing ones. It writes into `${XDG_CONFIG_HOME:-~/.config}`, rewrites the author's absolute paths in the btop, fastfetch, and fish configs, makes helper scripts executable, and never starts services. Symlinked destinations are refused. The interactive interface requires `gum`; when it is missing, the installer offers to install it first, using your package manager or the official release binary in `~/.local/bin`. Preview without writing, install everything unattended (no `gum` needed), or only report dependencies:
-
-```sh
-./install.sh --dry-run
-./install.sh --yes
-./install.sh --no-deps
 ```
 
 After installing Quickshell and its dependencies, start the desktop shell with:
@@ -82,7 +70,7 @@ qs -c macmono
 
 ## Configuration notes
 
-- The Hyprland files use Lua modules and are not a standard standalone `hyprland.conf`. Check that your setup supports this format before selecting that component.
+- The Hyprland files use Lua modules and are not a standard standalone `hyprland.conf`. Check that your setup supports this format before using that component.
 - Review monitor scale, keyboard layout, keybinds, and application preferences before using the Hyprland configuration. Defaults may not match your hardware or workflow.
 - The Fish config sources the CachyOS fish configuration when present and skips it on other distributions.
 - Missing system utilities may disable only the related feature. Review the scripts before adapting them to another distribution.

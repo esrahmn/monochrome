@@ -12,7 +12,8 @@ NO_DEPS=0
 GUM_BIN=""
 STAGE=""
 BACKUP_ROOT=""
-BACKUP_COUNT=0
+INTERNAL_KEY=""
+INTERNAL_BACKUP=""
 DISTRO_NAME="Linux"
 DISTRO_FAMILY=unknown
 PKG_MANAGER=""
@@ -54,6 +55,15 @@ while (($#)); do
     -n|--dry-run) DRY_RUN=1 ;;
     -y|--yes) ASSUME_YES=1 ;;
     --no-deps) NO_DEPS=1 ;;
+    --_install-component)
+      shift
+      [[ $# -gt 0 ]] || { printf 'missing value for --_install-component\n' >&2; exit 2; }
+      INTERNAL_KEY=$1
+      ;;
+    --_backup-root)
+      shift
+      INTERNAL_BACKUP=${1:-}
+      ;;
     *) printf 'Unknown option: %s\n\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
   shift
@@ -364,7 +374,13 @@ install_packages() {
     cmd+=("${PKG_ARGS[@]}")
   fi
   cmd+=("$@")
-  "${cmd[@]}"
+  if [[ -n "${SPIN_TITLE:-}" && -n "$GUM_BIN" && -t 0 && -t 1 ]]; then
+    "$GUM_BIN" spin --spinner dot --show-error \
+      --spinner.foreground=255 --title.foreground=244 \
+      --title "$SPIN_TITLE" -- "${cmd[@]}"
+  else
+    "${cmd[@]}"
+  fi
 }
 
 preview_deps() {
@@ -394,7 +410,7 @@ offer_deps() {
 
   read -r -a pkg_list <<<"$packages"
   for pkg in "${pkg_list[@]}"; do
-    if install_packages "$pkg"; then
+    if SPIN_TITLE="Installing $pkg" install_packages "$pkg"; then
       printf '   %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$pkg"
     else
       printf '   %s✗%s %s\n' "$C_YELLOW" "$C_RESET" "$pkg"
@@ -496,7 +512,7 @@ ensure_gum() {
   fi
 
   if [[ -n "$package" && $DEP_INSTALL_OK -eq 1 ]]; then
-    install_packages "$package" || true
+    SPIN_TITLE='Installing gum' install_packages "$package" || true
   fi
   if ! command -v gum >/dev/null 2>&1; then
     download_gum || true
@@ -514,17 +530,32 @@ ensure_gum() {
 trap 'printf "\n  %sInstallation failed.%s Partial files may remain; backup: %s\n" "$C_RED" "$C_RESET" "${BACKUP_ROOT:-none}" >&2' ERR
 
 print_banner() {
+  local -a lines=()
   printf '\n'
   printf '   █   █  ███  █   █  ███   ███  █   █ ████   ███  █   █ █████\n'
   printf '   ██ ██ █   █ ██  █ █   █ █     █   █ █   █ █   █ ██ ██ █\n'
   printf '   █ █ █ █   █ █ █ █ █   █ █     █████ ████  █   █ █ █ █ ███\n'
   printf '   █   █ █   █ █  ██ █   █ █     █   █ █  █  █   █ █   █ █\n'
   printf '   █   █  ███  █   █  ███   ███  █   █ █   █  ███  █   █ █████\n'
-  printf '\n   %smonochrome dotfiles installer%s\n' "$C_BOLD" "$C_RESET"
-  printf '   %sconfigs → %s%s\n' "$C_DIM" "$(short_path "$CONFIG_HOME")" "$C_RESET"
-  printf '   %sdistro  → %s (%s%s)%s\n' "$C_DIM" "$DISTRO_NAME" "$DISTRO_FAMILY" "${PKG_MANAGER:+ · $PKG_MANAGER}" "$C_RESET"
-  if ((DRY_RUN)); then
-    printf '   %sdry run — no files will be written%s\n' "$C_YELLOW" "$C_RESET"
+  printf '\n'
+
+  if [[ -n "$GUM_BIN" ]]; then
+    lines+=("$("$GUM_BIN" style --bold --foreground 255 'monochrome dotfiles installer')")
+    lines+=('')
+    lines+=("$("$GUM_BIN" style --foreground 244 "configs   $(short_path "$CONFIG_HOME")")")
+    lines+=("$("$GUM_BIN" style --foreground 244 "distro    $DISTRO_NAME ($DISTRO_FAMILY${PKG_MANAGER:+ · $PKG_MANAGER})")")
+    if ((DRY_RUN)); then
+      lines+=("$("$GUM_BIN" style --foreground 214 'dry run   no files will be written')")
+    fi
+    printf '%s\n' "${lines[@]}" | "$GUM_BIN" style --border rounded \
+      --border-foreground 240 --padding '1 3' --margin '0 2' --width 58 --align center
+  else
+    printf '   %smonochrome dotfiles installer%s\n' "$C_BOLD" "$C_RESET"
+    printf '   %sconfigs → %s%s\n' "$C_DIM" "$(short_path "$CONFIG_HOME")" "$C_RESET"
+    printf '   %sdistro  → %s (%s%s)%s\n' "$C_DIM" "$DISTRO_NAME" "$DISTRO_FAMILY" "${PKG_MANAGER:+ · $PKG_MANAGER}" "$C_RESET"
+    if ((DRY_RUN)); then
+      printf '   %sdry run — no files will be written%s\n' "$C_YELLOW" "$C_RESET"
+    fi
   fi
   printf '\n'
 }
@@ -558,15 +589,34 @@ gum_menu() {
 }
 
 print_plan() {
-  local key destination existing=0 packages unmapped
-  printf '\n  %sPlan%s\n\n' "$C_BOLD" "$C_RESET"
-  for key in "${CHOSEN[@]}"; do
-    destination="${DST[$key]}"
-    if [[ -e "$destination" ]]; then
-      existing=$((existing + 1))
-    fi
-    printf '   %-20s %s%s%s\n' "${LABEL[$key]}" "$C_DIM" "$(short_path "$destination")" "$C_RESET"
-  done
+  local key destination action existing=0 packages unmapped rows=()
+  printf '\n'
+  if [[ -n "$GUM_BIN" ]]; then
+    printf '  %s\n\n' "$("$GUM_BIN" style --bold --foreground 244 'Plan')"
+    for key in "${CHOSEN[@]}"; do
+      destination="${DST[$key]}"
+      if [[ -e "$destination" ]]; then
+        existing=$((existing + 1))
+        action='back up + install'
+      else
+        action='install'
+      fi
+      rows+=("${LABEL[$key]}|$(short_path "$destination")|$action")
+    done
+    printf '%s\n' "${rows[@]}" | "$GUM_BIN" table --print --separator '|' \
+      --columns 'Component,Destination,Action' --border rounded \
+      --border.foreground=240 --header.foreground=255 \
+      --cell.foreground=252 --padding '0 1'
+  else
+    printf '  %sPlan%s\n\n' "$C_BOLD" "$C_RESET"
+    for key in "${CHOSEN[@]}"; do
+      destination="${DST[$key]}"
+      if [[ -e "$destination" ]]; then
+        existing=$((existing + 1))
+      fi
+      printf '   %-20s %s%s%s\n' "${LABEL[$key]}" "$C_DIM" "$(short_path "$destination")" "$C_RESET"
+    done
+  fi
   printf '\n'
   if ((existing)); then
     printf '   %d existing destination(s) will be backed up to %s%s%s\n' \
@@ -643,7 +693,6 @@ install_one() {
     backup="$BACKUP_ROOT/${REL[$key]}"
     mkdir -p -- "$(dirname -- "$backup")"
     cp -a -- "$destination" "$backup" || die "backup failed: $destination"
-    BACKUP_COUNT=$((BACKUP_COUNT + 1))
   fi
 
   STAGE="$destination.monochrome-new.$$"
@@ -673,7 +722,7 @@ install_one() {
 }
 
 install_selected() {
-  local key start elapsed
+  local key start elapsed backups=0
   mapfile -t CHOSEN < <(chosen_keys)
 
   if ((${#CHOSEN[@]} == 0)); then
@@ -685,6 +734,12 @@ install_selected() {
     [[ -e "${SRC[$key]}" ]] || die "missing source: ${SRC[$key]}"
     if has_symlink_in_path "${DST[$key]}"; then
       die "refusing to write through a symlink: ${DST[$key]}"
+    fi
+  done
+
+  for key in "${CHOSEN[@]}"; do
+    if [[ -e "${DST[$key]}" ]]; then
+      backups=$((backups + 1))
     fi
   done
 
@@ -714,28 +769,64 @@ install_selected() {
   start=$SECONDS
   printf '\n  %sInstalling%s\n\n' "$C_BOLD" "$C_RESET"
   for key in "${CHOSEN[@]}"; do
-    install_one "$key"
+    if [[ -n "$GUM_BIN" && -t 0 && -t 1 ]]; then
+      if ! "$GUM_BIN" spin --spinner dot --show-error \
+        --spinner.foreground=255 --title.foreground=244 \
+        --title "Installing ${LABEL[$key]}" -- bash "$0" \
+        --_install-component "$key" --_backup-root "$BACKUP_ROOT"; then
+        die "failed to install ${LABEL[$key]}; backup: $BACKUP_ROOT"
+      fi
+    else
+      install_one "$key"
+    fi
     printf '   %s✓%s %s\n' "$C_GREEN" "$C_RESET" "${LABEL[$key]}"
   done
   elapsed=$((SECONDS - start))
 
-  printf '\n  %sInstalled %d component(s) in %ds%s\n' \
-    "$C_GREEN" "${#CHOSEN[@]}" "$elapsed" "$C_RESET"
-  printf '   configs   %s\n' "$(short_path "$CONFIG_HOME")"
-  if ((BACKUP_COUNT)); then
-    printf '   backup    %s\n' "$(short_path "$BACKUP_ROOT")"
-    printf '   restore   cp -a %s/. %s/\n' "$(short_path "$BACKUP_ROOT")" "$(short_path "$CONFIG_HOME")"
+  if [[ -n "$GUM_BIN" ]]; then
+    local -a summary=()
+    summary+=("$("$GUM_BIN" style --bold --foreground 255 "Installed ${#CHOSEN[@]} component(s) in ${elapsed}s")")
+    summary+=("configs   $(short_path "$CONFIG_HOME")")
+    if ((backups)); then
+      summary+=("backup    $(short_path "$BACKUP_ROOT")")
+      summary+=("restore   cp -a $(short_path "$BACKUP_ROOT")/. $(short_path "$CONFIG_HOME")/")
+    fi
+    if [[ "${ON[quickshell]}" == 1 ]]; then
+      summary+=("start     qs -c macmono")
+    fi
+    printf '\n'
+    printf '%s\n' "${summary[@]}" | "$GUM_BIN" style --border rounded \
+      --border-foreground 240 --padding '1 2' --margin '0 2' --width 70
+    printf '\n'
+  else
+    printf '\n  %sInstalled %d component(s) in %ds%s\n' \
+      "$C_GREEN" "${#CHOSEN[@]}" "$elapsed" "$C_RESET"
+    printf '   configs   %s\n' "$(short_path "$CONFIG_HOME")"
+    if ((backups)); then
+      printf '   backup    %s\n' "$(short_path "$BACKUP_ROOT")"
+      printf '   restore   cp -a %s/. %s/\n' "$(short_path "$BACKUP_ROOT")" "$(short_path "$CONFIG_HOME")"
+    fi
+    if [[ "${ON[quickshell]}" == 1 ]]; then
+      printf '\n   Start the desktop: log in to Hyprland, then run %sqs -c macmono%s\n' "$C_BOLD" "$C_RESET"
+    fi
+    printf '\n'
   fi
-  if [[ "${ON[quickshell]}" == 1 ]]; then
-    printf '\n   Start the desktop: log in to Hyprland, then run %sqs -c macmono%s\n' "$C_BOLD" "$C_RESET"
-  fi
-  printf '\n'
 }
 
+if [[ -n "$INTERNAL_KEY" ]]; then
+  [[ -n "$INTERNAL_BACKUP" ]] || die "internal install requires a backup root"
+  BACKUP_ROOT=$INTERNAL_BACKUP
+  install_one "$INTERNAL_KEY"
+  exit 0
+fi
+
 detect_distro
-print_banner
 
 if ((ASSUME_YES)); then
+  if command -v gum >/dev/null 2>&1; then
+    GUM_BIN="$(command -v gum)"
+  fi
+  print_banner
   set_all 1
   install_selected
   exit 0
@@ -746,6 +837,7 @@ if [[ ! -t 0 ]]; then
 fi
 
 if ((DRY_RUN)) && ! command -v gum >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/gum" ]]; then
+  print_banner
   printf '   %sgum is not installed; the dry-run menu is skipped and all components are used.%s\n' "$C_DIM" "$C_RESET"
   set_all 1
   install_selected
@@ -753,6 +845,7 @@ if ((DRY_RUN)) && ! command -v gum >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/
 fi
 
 ensure_gum
+print_banner
 gum_menu
 install_selected
 exit 0
