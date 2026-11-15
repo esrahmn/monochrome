@@ -32,7 +32,7 @@ EOF
     cat <<EOF
 
 listener {
-    timeout = $((LOCK * 60)) # ${LOCK}min
+    timeout = $((LOCK * 60))
     on-timeout = loginctl lock-session
 }
 EOF
@@ -41,7 +41,7 @@ EOF
     cat <<EOF
 
 listener {
-    timeout = $((OFF * 60)) # ${OFF}min
+    timeout = $((OFF * 60))
     on-timeout = hyprctl dispatch 'hl.dsp.dpms({ action = "disable" })'
     on-resume = hyprctl dispatch 'hl.dsp.dpms({ action = "enable" })'
 }
@@ -51,7 +51,7 @@ EOF
     cat <<EOF
 
 listener {
-    timeout = $((SUSP * 60)) # ${SUSP}min
+    timeout = $((SUSP * 60))
     on-timeout = \$suspend_cmd
 }
 EOF

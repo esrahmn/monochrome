@@ -162,7 +162,7 @@ def main():
 
     cfg = json.loads(MAP_FILE.read_text())
     default_set = cfg.get("set", "lucide")
-    wanted = {}   # glyph -> (prefix, id, fill)
+    wanted = {}
     for glyph, v in cfg["icons"].items():
         fill = False
         if isinstance(v, dict):

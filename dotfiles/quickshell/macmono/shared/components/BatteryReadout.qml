@@ -1,12 +1,9 @@
 import QtQuick
 import "../../core"
 
-// Battery as the island draws it: percentage, battery icon, and a bolt while charging.
-// Hides itself on machines without a battery.
 Row {
     id: root
 
-    // The bolt is a little smaller in the island than on the lock screen, so it can be set.
     property int boltSize: Theme.iconSm
 
     visible: Sys.batAvailable

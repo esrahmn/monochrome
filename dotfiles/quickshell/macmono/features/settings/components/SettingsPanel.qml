@@ -123,8 +123,6 @@ FocusScope {
         if (previewKeys.indexOf(item.key) >= 0) previewInput();
     }
 
-    // Input settings that are shown live while they are still a draft. Keyboard layout,
-    // variant and options are left out on purpose (a wrong layout can lock the keyboard).
     readonly property var previewKeys: [
         "inputSensitivity", "inputRepeatRate", "inputRepeatDelayMs", "inputNaturalScroll",
         "inputTapToClick", "inputDisableWhileTyping", "inputClickfinger", "inputScrollFactor"

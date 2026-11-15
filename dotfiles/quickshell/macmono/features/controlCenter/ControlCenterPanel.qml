@@ -96,8 +96,6 @@ Item {
                         radius: Math.min(width, height) / 2
                         color: Theme.tileHover
 
-                        // Round avatar without a color effect: ClippingRectangle clips the corners directly,
-                        // with no separate layer mask + shader effect (two offscreen renders).
                         ClippingRectangle {
                             anchors.fill: parent
                             radius: parent.radius

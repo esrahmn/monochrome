@@ -2,9 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Finds where this computer is through GeoClue (scripts/session/locate.py) and turns the
-// coordinates into a place name. Weather and the Night Light schedule use it when
-// "Detect location automatically" is on.
 Scope {
     id: root
 
@@ -74,7 +71,6 @@ Scope {
     }
     Component.onCompleted: if (enabled) startDelay.restart()
 
-    // Give the network a moment after login before the first try.
     Timer { id: startDelay; interval: 3000; onTriggered: root.locate() }
     Timer { id: retry; interval: root.failures < 5 ? 20000 : 300000; onTriggered: root.locate() }
     Timer {
@@ -97,7 +93,6 @@ Scope {
                 root.pendingLat = r.lat;
                 root.pendingLon = r.lon;
                 root.pendingKey = r.lat.toFixed(2) + "," + r.lon.toFixed(2);
-                // Same spot as last time: keep the name, skip the lookup.
                 if (root.pendingKey === root.namedKey && root.name !== "") { root.publish(root.name); return; }
 
                 nameProc.command = ["curl", "-sS", "--max-time", "8", "--get", "-A", "macmono-shell",

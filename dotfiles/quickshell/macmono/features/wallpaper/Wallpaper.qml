@@ -4,8 +4,6 @@ import Quickshell.Wayland
 import "../../core"
 import "../../shared/components"
 
-// The desktop wallpaper itself (crossfades between images). Picking one happens in the island
-// (WallpaperPanel); showing the candidate over windows is WallpaperPreview.
 Scope {
     id: root
 
@@ -39,7 +37,6 @@ Scope {
                 function front() { return wall.frontA ? layerA : layerB; }
                 function back() { return wall.frontA ? layerB : layerA; }
 
-                // Completes a running crossfade at once and frees the old image.
                 function finish() {
                     if (!wall.fading) return;
                     fade.stop();
@@ -63,7 +60,6 @@ Scope {
                     layer.outgoing = false;
                     wall.incoming = layer;
                     wall.fading = true;
-                    // The preview covers the screen while the picker is open, so swap without a fade.
                     if (Sys.wallpaperOpen) {
                         layer.reveal = 1;
                         wall.finish();
@@ -109,11 +105,10 @@ Scope {
                     from: 0
                     to: 1
                     duration: Theme.wallpaperFadeMs
-                    easing.type: Easing.Linear   // class C: curve shaped in WallMotion
+                    easing.type: Easing.Linear
                     onFinished: wall.finish()
                 }
 
-                // The old image darkens as the new one slides over it (z 1.5: between the two layers).
                 WallMotion { id: dimMotion; t: wall.incoming ? wall.incoming.reveal : 0; dir: wall.dir; span: bg.width }
                 Rectangle {
                     anchors.fill: parent

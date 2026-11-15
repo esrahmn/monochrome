@@ -33,16 +33,13 @@ Rectangle {
 
     property bool dragging: false
     property int dragTarget: -1
-    // Outline colors. Translucent on purpose: a soft one for "you are here", a firmer one for a cursor or drop target.
     readonly property color edgeSoft: Qt.alpha(Theme.text, 0.4)
     readonly property color edgeStrong: Qt.alpha(Theme.text, 0.65)
 
-    // Keyboard navigation: workspace cursor (arrows) and window cursor (Tab).
     property bool kbActive: false
     property int cursorWs: -1
     property string cursorWin: ""
     readonly property int cur: (cursorWs >= firstWs && cursorWs < firstWs + perGroup) ? cursorWs : activeWs
-    // The workspace that gets the firm frame: the drop target while dragging, else the arrow-key cursor.
     readonly property int frameWs: dragging ? dragTarget : ((kbActive && cursorWin === "") ? cur : -1)
 
     function resetCursor() { kbActive = false; cursorWs = -1; cursorWin = ""; }
@@ -110,7 +107,6 @@ Rectangle {
         return firstWs + r * cols + c;
     }
     function dispatch(cmd) { Hyprland.dispatch(cmd); }
-    // Drops the saved pictures of windows that no longer exist.
     function pruneShots() {
         const alive = ({});
         for (const c of Sys.hyprClients) alive[c.address] = true;
@@ -121,7 +117,6 @@ Rectangle {
 
     implicitWidth: grid.width + 24
     implicitHeight: grid.height + 24
-    // No frame of its own: the island draws the glass behind it.
     color: Theme.transparent
 
     MouseArea { anchors.fill: parent }
@@ -191,8 +186,6 @@ Rectangle {
                     Qt.callLater(() => w.capReset = false);
                 }
                 onWantsPreviewChanged: retries = 0
-                // Saved picture of this window from an earlier open. It shows at once, and the live
-                // stream fades in over it when its first frame arrives.
                 readonly property var snap: Sys.overviewShots[modelData] ?? null
                 function snapshot() {
                     if (!preview.hasContent || preview.width < 2 || preview.height < 2) return;
@@ -277,7 +270,6 @@ Rectangle {
                     anchors.fill: parent
                     radius: Theme.radiusControl
                     color: (w.sel || (area.containsMouse && !ov.kbActive)) ? Theme.tile : Theme.transparent
-                    // No hover outline. A thin outline marks the window you are in; the keyboard cursor and a drag use a thicker one.
                     border.width: (w.sel || w.held) ? 2 : (w.isActive ? 1 : 0)
                     border.color: (w.sel || w.held) ? ov.edgeStrong : ov.edgeSoft
                 }
@@ -329,7 +321,6 @@ Rectangle {
             }
         }
 
-        // The active workspace, soft. Drawn above the windows, which can fill their whole cell.
         Rectangle {
             readonly property var p: ov.cellPos(ov.activeWs)
             visible: ov.activeWs >= ov.firstWs && ov.activeWs < ov.firstWs + ov.perGroup && ov.frameWs !== ov.activeWs
@@ -344,7 +335,6 @@ Rectangle {
             Behavior on y { Tween {} }
         }
 
-        // Arrow-key cursor or drop target, firm. One frame, so it never stacks with the soft one.
         Rectangle {
             readonly property var p: ov.cellPos(ov.frameWs)
             visible: ov.frameWs >= ov.firstWs && ov.frameWs < ov.firstWs + ov.perGroup

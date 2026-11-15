@@ -6,14 +6,7 @@ import Quickshell.Widgets
 import "../../core"
 import "../../shared/components"
 
-// The wallpaper picker, as a body of the island. No window and no frame of its own.
-// Hovering a thumbnail previews it full screen behind the island (WallpaperPreview), sliding in
-// the direction you moved. Clicking one keeps it and the island closes. The keyboard works too:
-//   Left/Right or H/L  previous / next     Enter  keep     Esc  cancel
-//   Home / End  first / last               R  shuffle      M  monochrome
-//
-// The strip never reflows: every thumbnail has the same fixed cell, the selected one only scales up
-// in place, and the strip glides so the selection stays in the middle. Nothing jumps while you pick.
+// Hover previews a wallpaper; click or Enter keeps it; Esc cancels.
 Item {
     id: root
 
@@ -37,9 +30,7 @@ Item {
     property string previousWallpaper: ""
     property bool keeping: false
     property real wheelAcc: 0
-    // The thumbnail under the pointer. While set, it is what the desktop previews instead of selPath.
     property string hoverPath: ""
-    // The strip glides only once it has settled in place, so opening does not scroll from the start.
     property bool stripAnimated: false
 
     readonly property var folders: {
@@ -52,8 +43,6 @@ Item {
         return out;
     }
 
-    // The list the strip shows. It is replaced only when its contents really change: the wallpaper list
-    // is reloaded every time the picker opens, and handing the strip an identical new array would reset it.
     property var pics: []
     readonly property int selIndex: pics.indexOf(selPath)
 
@@ -78,8 +67,6 @@ Item {
         previewTimer.restart();
         keys.forceActiveFocus();
     }
-    // Pointer moved onto a thumbnail ("" = left the strip). The debounce keeps the desktop from
-    // flickering back to the selection while the pointer crosses from one thumbnail to the next.
     function hover(p) {
         if (keeping || hoverPath === p) return;
         hoverPath = p;
@@ -108,8 +95,6 @@ Item {
         if (selIndex >= 0) strip.positionViewAtIndex(selIndex, ListView.Center);
     }
 
-    // Keep: apply the wallpaper, wait until the desktop has really loaded it (so closing the preview
-    // does not flash the old one), then close. If it fails to load, the previous wallpaper comes back.
     function keep() {
         if (keeping) return;
         if (selPath === "") { Sys.wallpaperOpen = false; return; }
@@ -170,7 +155,6 @@ Item {
         }
         function onWallpaperOpenChanged() {
             if (Sys.wallpaperOpen) return;
-            // Closed without finishing: undo a half-applied Keep.
             if (root.keeping && Sys.wallpaper === root.selPath) Sys.wallpaper = root.previousWallpaper;
             root.keeping = false;
             readyTimeout.stop();
@@ -280,18 +264,15 @@ Item {
             spacing: 0
             clip: true
             model: root.pics
-            // Selection moves it (keys, wheel, click); dragging it would fight the selection.
             interactive: false
             boundsBehavior: Flickable.StopAtBounds
             cacheBuffer: root.wpCellWidth * 6
-            // The selected thumbnail stays in the middle and the strip glides to follow it.
             highlightRangeMode: ListView.StrictlyEnforceRange
             preferredHighlightBegin: (width - root.wpCellWidth) / 2
             preferredHighlightEnd: (width + root.wpCellWidth) / 2
             highlightMoveDuration: root.stripAnimated ? 280 : 0
             highlightMoveVelocity: -1
 
-            // The wheel steps through the wallpapers instead of scrolling the strip.
             WheelHandler {
                 onWheel: (e) => {
                     root.wheelAcc += e.angleDelta.y;
@@ -305,7 +286,6 @@ Item {
                 required property string modelData
                 readonly property bool picked: modelData === root.selPath
                 readonly property bool live: modelData === Sys.wallpaper
-                // Fixed size: the layout never changes, only how the thumbnail is drawn.
                 width: root.wpCellWidth
                 height: ListView.view.height
 
@@ -362,8 +342,6 @@ Item {
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-                    // Only real pointer motion previews: the strip gliding under a resting pointer
-                    // (arrow keys, wheel) must not take the preview away from the keyboard selection.
                     onPositionChanged: root.hover(cell.modelData)
                     onExited: if (root.hoverPath === cell.modelData) root.hover("")
                     onClicked: { root.select(cell.modelData); root.keep(); }

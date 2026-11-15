@@ -4,7 +4,6 @@ import QtQuick
 import Quickshell
 
 Singleton {
-    // Sizes shared by several files in features/settings.
     readonly property int settingsListRowHeight: 40
     readonly property color settingsDescText: Qt.rgba(1, 1, 1, 0.62)
     readonly property int aboutLaptopBezel: 3

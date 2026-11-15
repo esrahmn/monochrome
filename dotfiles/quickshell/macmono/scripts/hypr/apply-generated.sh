@@ -168,7 +168,7 @@ apply)
     if [ -n "${1:-}" ]; then
         tok="$$-$(date +%s%N)"
         printf '%s' "$tok" > "$P"
-        # Do not let the sleeping watchdog inherit the transaction lock.
+        # Keep the watchdog out of the transaction lock.
         setsid -f bash "$0" --section "$SECTION" watchdog "$1" "$tok" 9>&- >/dev/null 2>&1
     else
         rm -f "$P"
