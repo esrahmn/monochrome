@@ -208,7 +208,13 @@ for key in "${KEYS[@]}"; do
 done
 
 short_path() {
-  printf '%s' "${1/#$HOME/~}"
+  if [[ "$1" == "$HOME" ]]; then
+    printf '~'
+  elif [[ "$1" == "$HOME"/* ]]; then
+    printf '~%s' "${1:"${#HOME}"}"
+  else
+    printf '%s' "$1"
+  fi
 }
 
 set_all() {
@@ -532,25 +538,21 @@ trap 'printf "\n  %sInstallation failed.%s Partial files may remain; backup: %s\
 print_banner() {
   local -a lines=()
   printf '\n'
-  printf '   █   █  ███  █   █  ███   ███  █   █ ████   ███  █   █ █████\n'
-  printf '   ██ ██ █   █ ██  █ █   █ █     █   █ █   █ █   █ ██ ██ █\n'
-  printf '   █ █ █ █   █ █ █ █ █   █ █     █████ ████  █   █ █ █ █ ███\n'
-  printf '   █   █ █   █ █  ██ █   █ █     █   █ █  █  █   █ █   █ █\n'
-  printf '   █   █  ███  █   █  ███   ███  █   █ █   █  ███  █   █ █████\n'
-  printf '\n'
 
   if [[ -n "$GUM_BIN" ]]; then
-    lines+=("$("$GUM_BIN" style --bold --foreground 255 'monochrome dotfiles installer')")
-    lines+=('')
+    lines+=("$("$GUM_BIN" style --bold --foreground 255 'M O N O C H R O M E')")
+    lines+=("$("$GUM_BIN" style --foreground 244 'dotfiles installer')")
+    lines+=("$("$GUM_BIN" style --foreground 238 '────────────────────────')")
     lines+=("$("$GUM_BIN" style --foreground 244 "configs   $(short_path "$CONFIG_HOME")")")
     lines+=("$("$GUM_BIN" style --foreground 244 "distro    $DISTRO_NAME ($DISTRO_FAMILY${PKG_MANAGER:+ · $PKG_MANAGER})")")
     if ((DRY_RUN)); then
       lines+=("$("$GUM_BIN" style --foreground 214 'dry run   no files will be written')")
     fi
     printf '%s\n' "${lines[@]}" | "$GUM_BIN" style --border rounded \
-      --border-foreground 240 --padding '1 3' --margin '0 2' --width 58 --align center
+      --border-foreground 240 --padding '1 3' --margin '0 2' --width 56 --align center
   else
-    printf '   %smonochrome dotfiles installer%s\n' "$C_BOLD" "$C_RESET"
+    printf '   %sM O N O C H R O M E%s\n' "$C_BOLD" "$C_RESET"
+    printf '   %sdotfiles installer%s\n\n' "$C_DIM" "$C_RESET"
     printf '   %sconfigs → %s%s\n' "$C_DIM" "$(short_path "$CONFIG_HOME")" "$C_RESET"
     printf '   %sdistro  → %s (%s%s)%s\n' "$C_DIM" "$DISTRO_NAME" "$DISTRO_FAMILY" "${PKG_MANAGER:+ · $PKG_MANAGER}" "$C_RESET"
     if ((DRY_RUN)); then
