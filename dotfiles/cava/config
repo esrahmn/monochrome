@@ -1,22 +1,9 @@
-[general]
-
-[input]
-
-[output]
-
 [color]
-
 background = default
-
 foreground = '#ffffff'
-
 gradient = 1
 gradient_count = 4
 gradient_color_1 = '#333333'
 gradient_color_2 = '#777777'
 gradient_color_3 = '#bbbbbb'
 gradient_color_4 = '#ffffff'
-
-[smoothing]
-
-[eq]
