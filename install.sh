@@ -37,7 +37,9 @@ Options:
 
 The distribution is detected from /etc/os-release. Missing tools are
 installed with pacman, apt-get, dnf, or zypper when available.
-The interactive menu requires gum and installs it first when missing.
+The interactive menu requires gum; when missing it is installed
+automatically, first from the distribution packages, then from the
+release binary (or a source build) on any other system.
 
 Components (all selected by default): quickshell, hypr, kitty,
 alacritty, btop, cava, fish, fastfetch, starship.
@@ -466,13 +468,12 @@ offer_deps() {
   fi
 }
 
-gum_bootstrap_confirm() {
-  local reply
-  read -r -p '   Install gum now? [Y/n] ' reply || return 1
-  case "${reply:-y}" in
-    y|Y|yes|Yes|YES) return 0 ;;
-    *) return 1 ;;
-  esac
+build_gum() {
+  command -v go >/dev/null 2>&1 || return 1
+  printf '   %sBuilding gum from source with go…%s\n' "$C_DIM" "$C_RESET"
+  mkdir -p -- "$HOME/.local/bin" || return 1
+  GOBIN="$HOME/.local/bin" go install github.com/charmbracelet/gum@latest || return 1
+  printf '   %sInstalled gum to %s%s\n' "$C_GREEN" "$(short_path "$HOME/.local/bin/gum")" "$C_RESET"
 }
 
 download_gum() {
@@ -524,15 +525,26 @@ download_gum() {
     wget -qO "$tmp/gum.tar.gz" "$url" || { rm -rf "$tmp"; return 1; }
   fi
   tar -xzf "$tmp/gum.tar.gz" -C "$tmp" || { rm -rf "$tmp"; return 1; }
-  local -a extracted=("$tmp"/gum_*/gum)
+
+  local binary
+  binary="$(find "$tmp" -type f -name gum -perm -u+x -print -quit 2>/dev/null || true)"
+  if [[ -z "$binary" ]]; then
+    binary="$(find "$tmp" -type f -name gum -print -quit 2>/dev/null || true)"
+  fi
+  if [[ -z "$binary" ]]; then
+    printf '   %sThe gum archive did not contain a gum binary.%s\n' "$C_YELLOW" "$C_RESET"
+    rm -rf "$tmp"
+    return 1
+  fi
+
   mkdir -p -- "$HOME/.local/bin"
-  install -m 0755 -- "${extracted[0]}" "$HOME/.local/bin/gum" || { rm -rf "$tmp"; return 1; }
+  install -m 0755 -- "$binary" "$HOME/.local/bin/gum" || { rm -rf "$tmp"; return 1; }
   rm -rf "$tmp"
   printf '   %sInstalled gum to %s%s\n' "$C_GREEN" "$(short_path "$HOME/.local/bin/gum")" "$C_RESET"
 }
 
 ensure_gum() {
-  local package
+  local package log
   if command -v gum >/dev/null 2>&1; then
     GUM_BIN="$(command -v gum)"
     return 0
@@ -542,20 +554,24 @@ ensure_gum() {
     return 0
   fi
 
-  printf '\n   %sgum is required for the installer interface and is not installed.%s\n' "$C_YELLOW" "$C_RESET"
+  printf '\n   %sgum is required for the installer interface; installing it.%s\n' "$C_YELLOW" "$C_RESET"
+
+  # Only touch the package manager with a usable sudo and an attached
+  # terminal: an unattended run would otherwise block on a password prompt.
   package="$(pkg_for_tool gum)"
-  if [[ -n "$package" ]]; then
-    printf '   %sPackage:%s %s%s\n' "$C_DIM" "$C_RESET" "$package" "${PKG_MANAGER:+ via $PKG_MANAGER}"
-  fi
-  if ! gum_bootstrap_confirm; then
-    die "gum is required; install it manually: https://github.com/charmbracelet/gum#installation"
+  if [[ -n "$package" && $DEP_INSTALL_OK -eq 1 && -t 0 ]]; then
+    printf '   %sTrying the %s package %s…%s\n' "$C_DIM" "$PKG_MANAGER" "$package" "$C_RESET"
+    log="$(mktemp)"
+    if install_packages "$package" >"$log" 2>&1; then
+      printf '   %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$package"
+    else
+      printf '   %sNot available through %s; using the release binary instead.%s\n' "$C_DIM" "$PKG_MANAGER" "$C_RESET"
+    fi
+    rm -f -- "$log"
   fi
 
-  if [[ -n "$package" && $DEP_INSTALL_OK -eq 1 ]]; then
-    SPIN_TITLE='Installing gum' install_packages "$package" || true
-  fi
-  if ! command -v gum >/dev/null 2>&1; then
-    download_gum || true
+  if ! command -v gum >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/gum" ]]; then
+    download_gum || build_gum || true
   fi
 
   if command -v gum >/dev/null 2>&1; then
@@ -563,8 +579,13 @@ ensure_gum() {
   elif [[ -x "$HOME/.local/bin/gum" ]]; then
     GUM_BIN="$HOME/.local/bin/gum"
   else
-    die "could not install gum; install it manually: https://github.com/charmbracelet/gum#installation"
+    die "could not install gum automatically; install it manually: https://github.com/charmbracelet/gum#installation"
   fi
+
+  case ":$PATH:" in
+    *":$HOME/.local/bin:"*) ;;
+    *) printf '   %sNote:%s add %s to PATH to use gum directly.\n' "$C_DIM" "$C_RESET" "$(short_path "$HOME/.local/bin")" ;;
+  esac
 }
 
 trap 'printf "\n  %sInstallation failed.%s Partial files may remain; backup: %s\n" "$C_RED" "$C_RESET" "${BACKUP_ROOT:-none}" >&2' ERR
@@ -894,8 +915,8 @@ fi
 detect_distro
 
 if ((ASSUME_YES)); then
-  if command -v gum >/dev/null 2>&1; then
-    GUM_BIN="$(command -v gum)"
+  if ! ((DRY_RUN)); then
+    ensure_gum
   fi
   print_banner
   set_all 1
