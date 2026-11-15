@@ -8,9 +8,19 @@ STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 
 DRY_RUN=0
 ASSUME_YES=0
+NO_DEPS=0
+GUM_BIN=""
 STAGE=""
 BACKUP_ROOT=""
 BACKUP_COUNT=0
+DISTRO_NAME="Linux"
+DISTRO_FAMILY=unknown
+PKG_MANAGER=""
+PKG_ARGS=()
+SUDO=""
+DEP_INSTALL_OK=0
+MISSING_TOOLS=""
+MISSING_FONTS=""
 
 usage() {
   cat <<'TXT'
@@ -21,7 +31,12 @@ Usage: ./install.sh [options]
 Options:
   -n, --dry-run  Show the plan without writing files.
   -y, --yes      Install all components without prompts.
+      --no-deps  Report missing tools without installing packages.
   -h, --help     Show this help.
+
+The distribution is detected from /etc/os-release. Missing tools are
+installed with pacman, apt-get, dnf, or zypper when available.
+The interactive menu requires gum and installs it first when missing.
 
 Components (all selected by default): quickshell, hypr, kitty,
 alacritty, btop, cava, fish, fastfetch, starship.
@@ -38,6 +53,7 @@ while (($#)); do
     -h|--help) usage; exit 0 ;;
     -n|--dry-run) DRY_RUN=1 ;;
     -y|--yes) ASSUME_YES=1 ;;
+    --no-deps) NO_DEPS=1 ;;
     *) printf 'Unknown option: %s\n\n' "$1" >&2; usage >&2; exit 2 ;;
   esac
   shift
@@ -131,6 +147,49 @@ declare -A NEEDS=(
   [fastfetch]="fastfetch"
   [starship]="starship"
 )
+declare -A PKG=(
+  [arch:gum]=gum
+  [arch:qs]=quickshell
+  [arch:hyprctl]=hyprland
+  [arch:hypridle]=hypridle
+  [arch:kitty]=kitty
+  [arch:alacritty]=alacritty
+  [arch:btop]=btop
+  [arch:cava]=cava
+  [arch:fish]=fish
+  [arch:fastfetch]=fastfetch
+  [arch:starship]=starship
+  [debian:gum]=gum
+  [debian:qs]=quickshell
+  [debian:hyprctl]=hyprland
+  [debian:hypridle]=hypridle
+  [debian:kitty]=kitty
+  [debian:alacritty]=alacritty
+  [debian:btop]=btop
+  [debian:cava]=cava
+  [debian:fish]=fish
+  [debian:fastfetch]=fastfetch
+  [debian:starship]=starship
+  [fedora:gum]=gum
+  [fedora:qs]=quickshell
+  [fedora:hyprctl]=hyprland
+  [fedora:hypridle]=hypridle
+  [fedora:kitty]=kitty
+  [fedora:alacritty]=alacritty
+  [fedora:btop]=btop
+  [fedora:cava]=cava
+  [fedora:fish]=fish
+  [fedora:fastfetch]=fastfetch
+  [fedora:starship]=starship
+  [suse:gum]=gum
+  [suse:kitty]=kitty
+  [suse:alacritty]=alacritty
+  [suse:btop]=btop
+  [suse:cava]=cava
+  [suse:fish]=fish
+  [suse:fastfetch]=fastfetch
+  [suse:starship]=starship
+)
 declare -A ON=()
 CHOSEN=()
 
@@ -140,16 +199,6 @@ done
 
 short_path() {
   printf '%s' "${1/#$HOME/~}"
-}
-
-selected_count() {
-  local key count=0
-  for key in "${KEYS[@]}"; do
-    if [[ "${ON[$key]}" == 1 ]]; then
-      count=$((count + 1))
-    fi
-  done
-  printf '%d' "$count"
 }
 
 set_all() {
@@ -220,6 +269,248 @@ missing_fonts() {
   fi
 }
 
+detect_distro() {
+  local id="" like=""
+  if [[ -r /etc/os-release ]]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    id="${ID:-}"
+    like="${ID_LIKE:-}"
+    DISTRO_NAME="${PRETTY_NAME:-${NAME:-Linux}}"
+  fi
+  case " $id $like " in
+    *" arch "*|*" archlinux "*) DISTRO_FAMILY=arch ;;
+    *" debian "*|*" ubuntu "*) DISTRO_FAMILY=debian ;;
+    *" fedora "*|*" rhel "*) DISTRO_FAMILY=fedora ;;
+    *" suse "*|*" opensuse "*) DISTRO_FAMILY=suse ;;
+    *) DISTRO_FAMILY=unknown ;;
+  esac
+
+  case "$DISTRO_FAMILY" in
+    arch) PKG_MANAGER=pacman; PKG_ARGS=(-S --needed --noconfirm) ;;
+    debian) PKG_MANAGER=apt-get; PKG_ARGS=(install -y) ;;
+    fedora) PKG_MANAGER=dnf; PKG_ARGS=(install -y) ;;
+    suse) PKG_MANAGER=zypper; PKG_ARGS=(--non-interactive install) ;;
+  esac
+
+  if [[ -n "$PKG_MANAGER" ]] && ! command -v "$PKG_MANAGER" >/dev/null 2>&1; then
+    PKG_MANAGER=""
+    PKG_ARGS=()
+  fi
+  if [[ -n "$PKG_MANAGER" ]]; then
+    if ((EUID == 0)); then
+      DEP_INSTALL_OK=1
+    elif command -v sudo >/dev/null 2>&1; then
+      SUDO=sudo
+      DEP_INSTALL_OK=1
+    fi
+  fi
+}
+
+pkg_for_tool() {
+  printf '%s' "${PKG[$DISTRO_FAMILY:$1]:-}"
+}
+
+deps_packages() {
+  local tool pkg seen=" " out=()
+  # shellcheck disable=SC2086
+  for tool in $1; do
+    pkg="$(pkg_for_tool "$tool")"
+    if [[ -z "$pkg" || "$seen" == *" $pkg "* ]]; then
+      continue
+    fi
+    seen+="$pkg "
+    out+=("$pkg")
+  done
+  if ((${#out[@]})); then
+    printf '%s' "${out[*]}"
+  fi
+}
+
+deps_unmapped() {
+  local tool seen=" " out=()
+  # shellcheck disable=SC2086
+  for tool in $1; do
+    if [[ -n "$(pkg_for_tool "$tool")" || "$seen" == *" $tool "* ]]; then
+      continue
+    fi
+    seen+="$tool "
+    out+=("$tool")
+  done
+  if ((${#out[@]})); then
+    printf '%s' "${out[*]}"
+  fi
+}
+
+deps_command() {
+  local -a cmd=()
+  if [[ -n "$SUDO" ]]; then
+    cmd+=("$SUDO")
+  fi
+  cmd+=("$PKG_MANAGER")
+  if ((${#PKG_ARGS[@]})); then
+    cmd+=("${PKG_ARGS[@]}")
+  fi
+  printf '%s' "${cmd[*]}"
+}
+
+install_packages() {
+  local -a cmd=()
+  if [[ -n "$SUDO" ]]; then
+    cmd+=("$SUDO")
+  fi
+  cmd+=("$PKG_MANAGER")
+  if ((${#PKG_ARGS[@]})); then
+    cmd+=("${PKG_ARGS[@]}")
+  fi
+  cmd+=("$@")
+  "${cmd[@]}"
+}
+
+preview_deps() {
+  local packages
+  packages="$(deps_packages "$MISSING_TOOLS")"
+  if [[ -n "$packages" && $DEP_INSTALL_OK -eq 1 ]]; then
+    printf '   %sWould run:%s %s %s\n' "$C_DIM" "$C_RESET" "$(deps_command)" "$packages"
+  else
+    printf '   %sInstall the missing tools with your package manager.%s\n' "$C_DIM" "$C_RESET"
+  fi
+}
+
+offer_deps() {
+  local missing=$1 packages remaining pkg failed=0
+  local -a pkg_list=()
+  packages="$(deps_packages "$missing")"
+  if [[ -z "$packages" || $DEP_INSTALL_OK -eq 0 ]]; then
+    printf '   %sInstall the missing tools manually; no usable package mapping for this system.%s\n' "$C_DIM" "$C_RESET"
+    return 0
+  fi
+
+  printf '   %sCommand:%s %s %s\n' "$C_DIM" "$C_RESET" "$(deps_command)" "$packages"
+  if ! confirm 'Install packages now? [Y/n] '; then
+    printf '   %sSkipped package installation.%s\n' "$C_DIM" "$C_RESET"
+    return 0
+  fi
+
+  read -r -a pkg_list <<<"$packages"
+  for pkg in "${pkg_list[@]}"; do
+    if install_packages "$pkg"; then
+      printf '   %s✓%s %s\n' "$C_GREEN" "$C_RESET" "$pkg"
+    else
+      printf '   %s✗%s %s\n' "$C_YELLOW" "$C_RESET" "$pkg"
+      failed=$((failed + 1))
+    fi
+  done
+
+  remaining="$(missing_tools)"
+  if [[ -n "$remaining" ]]; then
+    printf '   %sStill missing:%s %s\n' "$C_YELLOW" "$C_RESET" "$remaining"
+  elif ((failed == 0)); then
+    printf '   %sAll dependencies are available.%s\n' "$C_GREEN" "$C_RESET"
+  fi
+}
+
+gum_bootstrap_confirm() {
+  local reply
+  read -r -p '   Install gum now? [Y/n] ' reply || return 1
+  case "${reply:-y}" in
+    y|Y|yes|Yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+download_gum() {
+  local arch url tag tmp
+  case "$(uname -m)" in
+    x86_64|amd64) arch=x86_64 ;;
+    aarch64|arm64) arch=arm64 ;;
+    armv7l|armv7) arch=armv7 ;;
+    *)
+      printf '   %sUnsupported CPU architecture for the gum binary: %s%s\n' "$C_YELLOW" "$(uname -m)" "$C_RESET"
+      return 1
+      ;;
+  esac
+  if ! command -v tar >/dev/null 2>&1; then
+    printf '   %star is required to unpack the gum binary.%s\n' "$C_YELLOW" "$C_RESET"
+    return 1
+  fi
+  if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
+    printf '   %scurl or wget is required to download the gum binary.%s\n' "$C_YELLOW" "$C_RESET"
+    return 1
+  fi
+
+  if command -v curl >/dev/null 2>&1; then
+    url="$(curl -fsSL 'https://api.github.com/repos/charmbracelet/gum/releases/latest' 2>/dev/null \
+      | grep -oE "https://github.com/charmbracelet/gum/releases/download/[^\"]*_Linux_${arch}\\.tar\\.gz" \
+      | head -n1)"
+    if [[ -z "$url" ]]; then
+      tag="$(curl -fsSL -o /dev/null -w '%{url_effective}' 'https://github.com/charmbracelet/gum/releases/latest' 2>/dev/null)"
+      tag="${tag##*/}"
+      if [[ "$tag" == v* ]]; then
+        url="https://github.com/charmbracelet/gum/releases/download/$tag/gum_${tag#v}_Linux_${arch}.tar.gz"
+      fi
+    fi
+  else
+    url="$(wget -qO- 'https://api.github.com/repos/charmbracelet/gum/releases/latest' 2>/dev/null \
+      | grep -oE "https://github.com/charmbracelet/gum/releases/download/[^\"]*_Linux_${arch}\\.tar\\.gz" \
+      | head -n1)"
+  fi
+
+  if [[ -z "$url" ]]; then
+    printf '   %sCould not resolve a gum release download.%s\n' "$C_YELLOW" "$C_RESET"
+    return 1
+  fi
+
+  tmp="$(mktemp -d)"
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$url" -o "$tmp/gum.tar.gz" || { rm -rf "$tmp"; return 1; }
+  else
+    wget -qO "$tmp/gum.tar.gz" "$url" || { rm -rf "$tmp"; return 1; }
+  fi
+  tar -xzf "$tmp/gum.tar.gz" -C "$tmp" || { rm -rf "$tmp"; return 1; }
+  local -a extracted=("$tmp"/gum_*/gum)
+  mkdir -p -- "$HOME/.local/bin"
+  install -m 0755 -- "${extracted[0]}" "$HOME/.local/bin/gum" || { rm -rf "$tmp"; return 1; }
+  rm -rf "$tmp"
+  printf '   %sInstalled gum to %s%s\n' "$C_GREEN" "$(short_path "$HOME/.local/bin/gum")" "$C_RESET"
+}
+
+ensure_gum() {
+  local package
+  if command -v gum >/dev/null 2>&1; then
+    GUM_BIN="$(command -v gum)"
+    return 0
+  fi
+  if [[ -x "$HOME/.local/bin/gum" ]]; then
+    GUM_BIN="$HOME/.local/bin/gum"
+    return 0
+  fi
+
+  printf '\n   %sgum is required for the installer interface and is not installed.%s\n' "$C_YELLOW" "$C_RESET"
+  package="$(pkg_for_tool gum)"
+  if [[ -n "$package" ]]; then
+    printf '   %sPackage:%s %s%s\n' "$C_DIM" "$C_RESET" "$package" "${PKG_MANAGER:+ via $PKG_MANAGER}"
+  fi
+  if ! gum_bootstrap_confirm; then
+    die "gum is required; install it manually: https://github.com/charmbracelet/gum#installation"
+  fi
+
+  if [[ -n "$package" && $DEP_INSTALL_OK -eq 1 ]]; then
+    install_packages "$package" || true
+  fi
+  if ! command -v gum >/dev/null 2>&1; then
+    download_gum || true
+  fi
+
+  if command -v gum >/dev/null 2>&1; then
+    GUM_BIN="$(command -v gum)"
+  elif [[ -x "$HOME/.local/bin/gum" ]]; then
+    GUM_BIN="$HOME/.local/bin/gum"
+  else
+    die "could not install gum; install it manually: https://github.com/charmbracelet/gum#installation"
+  fi
+}
+
 trap 'printf "\n  %sInstallation failed.%s Partial files may remain; backup: %s\n" "$C_RED" "$C_RESET" "${BACKUP_ROOT:-none}" >&2' ERR
 
 print_banner() {
@@ -231,31 +522,43 @@ print_banner() {
   printf '   █   █  ███  █   █  ███   ███  █   █ █   █  ███  █   █ █████\n'
   printf '\n   %smonochrome dotfiles installer%s\n' "$C_BOLD" "$C_RESET"
   printf '   %sconfigs → %s%s\n' "$C_DIM" "$(short_path "$CONFIG_HOME")" "$C_RESET"
+  printf '   %sdistro  → %s (%s%s)%s\n' "$C_DIM" "$DISTRO_NAME" "$DISTRO_FAMILY" "${PKG_MANAGER:+ · $PKG_MANAGER}" "$C_RESET"
   if ((DRY_RUN)); then
     printf '   %sdry run — no files will be written%s\n' "$C_YELLOW" "$C_RESET"
   fi
   printf '\n'
 }
 
-print_menu() {
-  local index=0 key marker
-  printf '  %sComponents%s  %s%d/%d selected%s\n\n' \
-    "$C_BOLD" "$C_RESET" "$C_DIM" "$(selected_count)" "${#KEYS[@]}" "$C_RESET"
+gum_menu() {
+  local key line out options=()
   for key in "${KEYS[@]}"; do
-    index=$((index + 1))
-    marker=' '
-    if [[ "${ON[$key]}" == 1 ]]; then
-      marker='x'
-    fi
-    printf '   %d  [%s]  %-20s %s%s%s\n' \
-      "$index" "$marker" "${LABEL[$key]}" "$C_DIM" "$(short_path "${DST[$key]}")" "$C_RESET"
+    options+=("${LABEL[$key]}  $(short_path "${DST[$key]}"):$key")
   done
-  printf '\n   %s1-9%s toggle · %sa%s all · %sn%s none · %sEnter%s install · %sq%s quit\n\n' \
-    "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET" "$C_BOLD" "$C_RESET"
+
+  if ! out="$("$GUM_BIN" choose --no-limit --height=11 --selected='*' \
+    --header='Components · x toggles · enter installs' \
+    --label-delimiter=':' --cursor.foreground=252 \
+    --selected.foreground=255 --header.foreground=244 \
+    "${options[@]}")"; then
+    printf '\n   No changes made.\n\n'
+    exit 0
+  fi
+
+  if [[ -z "$out" ]]; then
+    printf '   %sNothing selected.%s\n\n' "$C_DIM" "$C_RESET"
+    exit 0
+  fi
+
+  set_all 0
+  while IFS= read -r line; do
+    if [[ -n "${LABEL[$line]+set}" ]]; then
+      ON[$line]=1
+    fi
+  done <<<"$out"
 }
 
 print_plan() {
-  local key destination existing=0 missing fonts
+  local key destination existing=0 packages unmapped
   printf '\n  %sPlan%s\n\n' "$C_BOLD" "$C_RESET"
   for key in "${CHOSEN[@]}"; do
     destination="${DST[$key]}"
@@ -272,13 +575,21 @@ print_plan() {
     printf '   %sNo existing configs; nothing to back up.%s\n' "$C_DIM" "$C_RESET"
   fi
 
-  missing="$(missing_tools)"
-  fonts="$(missing_fonts)"
-  if [[ -n "$missing" ]]; then
-    printf '   %sMissing tools:%s %s\n' "$C_YELLOW" "$C_RESET" "$missing"
+  MISSING_TOOLS="$(missing_tools)"
+  MISSING_FONTS="$(missing_fonts)"
+  if [[ -n "$MISSING_TOOLS" ]]; then
+    printf '   %sMissing tools:%s %s\n' "$C_YELLOW" "$C_RESET" "$MISSING_TOOLS"
+    packages="$(deps_packages "$MISSING_TOOLS")"
+    unmapped="$(deps_unmapped "$MISSING_TOOLS")"
+    if [[ -n "$packages" ]]; then
+      printf '   %sPackages:%s %s\n' "$C_DIM" "$C_RESET" "$packages"
+    fi
+    if [[ -n "$unmapped" ]]; then
+      printf '   %sNo package mapping:%s %s\n' "$C_DIM" "$C_RESET" "$unmapped"
+    fi
   fi
-  if [[ -n "$fonts" ]]; then
-    printf '   %sMissing fonts:%s %s\n' "$C_YELLOW" "$C_RESET" "$fonts"
+  if [[ -n "$MISSING_FONTS" ]]; then
+    printf '   %sMissing fonts:%s %s\n' "$C_YELLOW" "$C_RESET" "$MISSING_FONTS"
   fi
   if [[ "${ON[hypr]}" == 1 ]]; then
     printf '   %sHyprland config uses the Lua module format.%s\n' "$C_DIM" "$C_RESET"
@@ -286,15 +597,14 @@ print_plan() {
 }
 
 confirm() {
+  local prompt=${1:-'Continue? [Y/n] '}
   if ((ASSUME_YES)); then
     return 0
   fi
-  local reply
-  read -r -p '   Install now? [Y/n] ' reply || return 1
-  case "${reply:-y}" in
-    y|Y|yes|Yes|YES) return 0 ;;
-    *) return 1 ;;
-  esac
+  prompt=${prompt% \[Y/n\] }
+  "$GUM_BIN" confirm --default "$prompt" \
+    --prompt.foreground=252 --selected.foreground=232 \
+    --selected.background=252 --unselected.foreground=244
 }
 
 retarget() {
@@ -381,12 +691,22 @@ install_selected() {
   BACKUP_ROOT="$STATE_HOME/monochrome/backups/$(date '+%Y%m%d-%H%M%S')-$$"
   print_plan
 
+  if [[ -n "$MISSING_TOOLS" ]]; then
+    if ((NO_DEPS)); then
+      printf '   %sSkipped dependency installation (--no-deps).%s\n' "$C_DIM" "$C_RESET"
+    elif ((DRY_RUN)); then
+      preview_deps
+    else
+      offer_deps "$MISSING_TOOLS"
+    fi
+  fi
+
   if ((DRY_RUN)); then
     printf '   %sDry run: nothing was written.%s\n\n' "$C_DIM" "$C_RESET"
     return 0
   fi
 
-  if ! confirm; then
+  if ! confirm 'Install now? [Y/n] '; then
     printf '   Cancelled. No files were written.\n\n'
     return 0
   fi
@@ -412,6 +732,7 @@ install_selected() {
   printf '\n'
 }
 
+detect_distro
 print_banner
 
 if ((ASSUME_YES)); then
@@ -424,38 +745,14 @@ if [[ ! -t 0 ]]; then
   die "no interactive terminal; run ./install.sh --yes to install all components"
 fi
 
-while true; do
-  print_menu
-  read -r -p '   Choice: ' choice || exit 1
-  case "$choice" in
-    '')
-      if [[ "$(selected_count)" == 0 ]]; then
-        printf '  %sNothing selected.%s\n\n' "$C_DIM" "$C_RESET"
-        continue
-      fi
-      install_selected
-      exit 0
-      ;;
-    a|A)
-      set_all 1
-      ;;
-    n|N)
-      set_all 0
-      ;;
-    q|Q)
-      printf '  No changes made.\n\n'
-      exit 0
-      ;;
-    [1-9])
-      key="${KEYS[$((choice - 1))]}"
-      if [[ "${ON[$key]}" == 1 ]]; then
-        ON[$key]=0
-      else
-        ON[$key]=1
-      fi
-      ;;
-    *)
-      printf '  %sUse 1-9, a, n, Enter, or q.%s\n\n' "$C_DIM" "$C_RESET"
-      ;;
-  esac
-done
+if ((DRY_RUN)) && ! command -v gum >/dev/null 2>&1 && [[ ! -x "$HOME/.local/bin/gum" ]]; then
+  printf '   %sgum is not installed; the dry-run menu is skipped and all components are used.%s\n' "$C_DIM" "$C_RESET"
+  set_all 1
+  install_selected
+  exit 0
+fi
+
+ensure_gum
+gum_menu
+install_selected
+exit 0
