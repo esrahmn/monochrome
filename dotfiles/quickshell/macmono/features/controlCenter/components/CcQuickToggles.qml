@@ -21,6 +21,7 @@ RowLayout {
                 switch (modelData) {
                 case "dnd": return { glyph: Sys.dnd ? "bell-off" : "bell", title: "DND", sub: Sys.dnd ? "On" : "", on: Sys.dnd };
                 case "awake": return { glyph: "coffee", title: "Awake", sub: Sys.keepAwake ? "On" : "", on: Sys.keepAwake };
+                // Mic is always live; the tile only reflects mute so a missing input is explained by the state itself.
                 case "mic": return { glyph: Sys.micMuted ? "mic-off" : "mic", title: "Mic", sub: Sys.micMuted ? "Muted" : "", on: Sys.micMuted };
                 default: return { glyph: Sys.profileGlyph, title: "Power", sub: Sys.profileLabel, on: Sys.profile !== PowerProfile.PowerSaver };
                 }

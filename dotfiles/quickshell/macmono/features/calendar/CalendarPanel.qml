@@ -18,6 +18,7 @@ Item {
     property int viewYear: new Date().getFullYear()
     property int viewMonth: new Date().getMonth()
 
+    // Show only the weeks needed by this month, starting on Monday.
     readonly property var cells: {
         const lead = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();

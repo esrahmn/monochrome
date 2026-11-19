@@ -47,6 +47,7 @@ Rectangle {
                 value: Sys.muted ? 0 : Sys.volume
                 onMoved: (v) => Sys.setVolume(v)
             }
+            // Tap the volume label to pick the output device.
             MouseArea {
                 id: outArea
                 Layout.preferredWidth: root.ccSliderLabelWidth

@@ -43,6 +43,7 @@ Singleton {
     StateStore { id: stateStore }
     DisplayService { id: displaySvc }
     LocationService { id: locationSvc; enabled: Settings.weatherAuto }
+    // Where weather and Night Light look: the detected place when auto-detect works, otherwise the city picked in Settings.
     readonly property bool weatherAutoOn: Settings.weatherAuto && locationSvc.ok
     WeatherService {
         id: weatherSvc
@@ -68,6 +69,7 @@ Singleton {
     }
     property alias hyprSync: hyprSyncSvc
 
+    // Hyprland events turned into state (shared/services/HyprStateService.qml).
     HyprStateService { id: hyprStateSvc }
     readonly property string kbLayout: hyprStateSvc.layoutCode
     readonly property bool kbLayoutMulti: hyprStateSvc.layoutCount > 1 && hyprStateSvc.layoutCode !== ""
@@ -97,6 +99,8 @@ Singleton {
     property string activePanel: ""
     property string activePanelScreen: ""
     property bool syncingPanelState: false
+    // Last small picture of each window, by Hyprland address, kept for the overview so it opens
+    // with something to show before its live stream starts. Written only by features/overview/Overview.qml.
     property var overviewShots: ({})
 
     function claimPanel(name, screenName) {
@@ -150,6 +154,7 @@ Singleton {
     }
     property bool wallpaperOpen: false
     property string wallpaperScreen: ""
+    // The wallpaper being previewed while the picker is open ("" = none). The panel sets it; WallpaperPreview draws it.
     property string wallpaperPreview: ""
     onWallpaperOpenChanged: {
         if (wallpaperOpen) {
@@ -310,6 +315,7 @@ Singleton {
     property bool batChargingKnown: false
     onBatChargingChanged: {
         if (!batAvailable) return;
+        // The island shows plug/unplug itself, so no notification for it.
         batChargingKnown = true;
         checkBattery();
     }
@@ -376,9 +382,13 @@ Singleton {
         cheatOpen = true;
     }
 
+    // Live notifications the island is showing. Notifs (the server) fills it; NotifToasts draws it.
     property var toastModel: null
+    // Plain array of the same notifications (what NotifToasts draws) and whether the island is hovered (pauses their timers).
     property var toastItems: []
     property bool toastHover: false
+    // How many toasts are tracked right now. Kept by Notifs from the model's own insert/remove signals,
+    // so the island does not have to rely on binding through a var-held model.
     property int toastCount: 0
     property var notifHistory: []
     property int notifUnread: 0
@@ -524,6 +534,8 @@ Singleton {
     function refreshHypr() { hyprOverview.refresh(); }
     SystemClock { id: clock; precision: Settings.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes }
     readonly property var now: clock.date
+    // The time as the island draws it (24h or 12h, with or without seconds). The lock screen's pill uses it too,
+    // so the clock does not change shape between the two.
     readonly property string clockLabel: {
         const d = now;
         const pad = n => (n < 10 ? "0" : "") + n;
@@ -686,7 +698,9 @@ Singleton {
         }
     }
 
-    // Apps run in their own systemd scope, so restarting the shell does not kill them.
+    // Programs the user starts (apps, xdg-open, shortcuts) run in their own systemd scope instead of
+    // inside macmono.service. Otherwise restarting or crashing the shell would kill every app that was
+    // opened from it, and the service's memory total would include those apps.
     function spawn(argv, cwd) {
         const args = Array.from(argv ?? []);
         if (args.length === 0) return;

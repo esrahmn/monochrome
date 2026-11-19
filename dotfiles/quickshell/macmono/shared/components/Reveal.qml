@@ -12,17 +12,23 @@ Item {
     property real openDamp: Theme.revealOpenDamp
     property real closeDamp: Theme.revealCloseDamp
 
+    // Anticipation (opt-in, 0 = off). Closing first stretches to 1 + anticipate for anticipateMs,
+    // then shrinks: a little give before it goes. Other users of Reveal are not affected.
     property real anticipate: 0
     property int anticipateMs: 70
     property bool winding: false
 
     property real value: 0
     property real velocity: 0
+    // travel: unclamped spring value (may exceed 1 while bouncing), for translate/scale.
+    // progress: clamped 0..1, for opacity and visibility.
     readonly property real travel: value
     readonly property real progress: Math.max(0, Math.min(1, value))
     readonly property bool animating: frames.running
     readonly property bool present: open || (value > 0.006 && value !== 0)
 
+    // Stagger without extra animations: sub-progress for the [from, to] slice of one spring.
+    // span: clamped 0..1 (opacity). spanTravel: follows the bounce (position/scale).
     function span(from, to) {
         return Math.max(0, Math.min(1, (root.value - from) / (to - from)));
     }
@@ -30,6 +36,7 @@ Item {
         return root.value > 1 ? root.value : span(from, to);
     }
 
+    // Emitted when the spring comes to rest on its target (isOpen = open/close target).
     signal settled(bool isOpen)
 
     onOpenChanged: {

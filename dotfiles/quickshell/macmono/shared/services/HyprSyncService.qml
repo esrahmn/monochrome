@@ -2,7 +2,6 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 
-// Preview pushes values with `hyprctl eval`; Apply rewrites the config file.
 Scope {
     id: root
 
@@ -23,6 +22,8 @@ Scope {
         if (!list || list.length === 0) return "";
         return list.map(x => String(x).trim()).filter(x => x !== "").join(",");
     }
+    // withKb=false is used for the live preview: keyboard layouts are never previewed,
+    // a bad layout would leave the keyboard unusable until the next reload.
     function buildInputLua(v, withKb) {
         const lines = [
             "hl.config({",
@@ -67,22 +68,28 @@ Scope {
         }
     }
 
+    // Live preview: pushes unsaved Settings values straight to Hyprland with `hyprctl eval`,
+    // without touching macmono-generated.lua. Apply still goes through runInput() (file + reload).
     property bool previewActive: false
     property bool previewPending: false
     property var previewVals: ({})
     property double lastPreviewAt: 0
 
     function previewInput(v) { previewVals = v; previewActive = true; previewDebounce.restart(); }
+    // Back to the saved values (cancel / close without Apply).
     function restoreInput() {
         if (!previewActive) return;
         previewActive = false;
         previewVals = inputValues;
         previewDebounce.restart();
     }
+    // A Hyprland reload resets runtime values to the file. Put the unsaved preview back,
+    // but skip reloads that come right after our own push so it can never loop.
     function reapplyPreview() {
         if (!previewActive || Date.now() - lastPreviewAt < 1500) return;
         previewDebounce.restart();
     }
+    // Apply takes over: the saved config is about to be rewritten and reloaded anyway.
     function endPreview() { previewActive = false; previewDebounce.stop(); }
 
     Timer { id: previewDebounce; interval: 60; onTriggered: root.runPreview() }

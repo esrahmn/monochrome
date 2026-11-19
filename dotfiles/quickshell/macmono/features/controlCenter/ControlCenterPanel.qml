@@ -20,7 +20,7 @@ Item {
     property string expanded: ""
     property int playerIndex: -1
     readonly property var player: Sys.mediaPlayer(Mpris.players.values, playerIndex)
-    readonly property bool typing: wifiList.typing
+    readonly property bool typing: wifiOrbit.typing
     readonly property bool holdOpen: typing || Sys.wifiConnecting !== ""
 
     function toggleExpand(name) {
@@ -87,6 +87,7 @@ Item {
                 spacing: Theme.space16
 
                 RowLayout {
+                    visible: root.expanded !== "wifi"
                     Layout.fillWidth: true
                     spacing: Theme.space12
 
@@ -96,6 +97,8 @@ Item {
                         radius: Math.min(width, height) / 2
                         color: Theme.tileHover
 
+                        // Round avatar without a color effect: ClippingRectangle clips the corners directly,
+                        // with no separate layer mask + shader effect (two offscreen renders).
                         ClippingRectangle {
                             anchors.fill: parent
                             radius: parent.radius
@@ -179,6 +182,7 @@ Item {
                 }
 
                 ColumnLayout {
+                    visible: root.expanded !== "wifi"
                     Layout.fillWidth: true
                     spacing: Theme.space8
 
@@ -194,10 +198,43 @@ Item {
 
                 }
 
-                WifiList {
-                    id: wifiList
+                // Wi-Fi page: a back row on top, the list below. The rest of the panel is hidden meanwhile.
+                MouseArea {
+                    id: wifiBack
+                    visible: root.expanded === "wifi"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: root.ccHeaderButtonSize
+                    hoverEnabled: true
+                    onClicked: root.expanded = ""
 
-                    open: root.expanded === "wifi"
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.radiusControl
+                        color: wifiBack.containsMouse ? Theme.tile : Theme.transparent
+                        Behavior on color { TweenColor { duration: Theme.durFast } }
+                    }
+                    Row {
+                        anchors { left: parent.left; leftMargin: Theme.space8; verticalCenter: parent.verticalCenter }
+                        spacing: Theme.space8
+                        Glyph {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: Theme.iconSm; height: Theme.iconSm
+                            name: "chevron"
+                            rotation: 90
+                            color: Theme.text
+                        }
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: "Wi-Fi"
+                            color: Theme.text
+                            font.family: Theme.font; font.pixelSize: Theme.fontLg; font.weight: Theme.weightSemibold
+                        }
+                    }
+                }
+
+                WifiOrbit {
+                    id: wifiOrbit
+                    visible: root.expanded === "wifi"
                     Layout.fillWidth: true
                 }
 
@@ -207,6 +244,7 @@ Item {
                 }
 
                 CcSliders {
+                    visible: root.expanded !== "wifi"
                     expanded: root.expanded
                     onRequestExpand: (key) => {
                         return root.toggleExpand(key);
@@ -214,6 +252,8 @@ Item {
                 }
 
                 CcMedia {
+                    // CcMedia hides itself without a player; keep that and add the page rule.
+                    visible: root.expanded !== "wifi" && root.player !== null
                     player: root.player
                     players: Mpris.players.values
                     panelShown: root.shown
@@ -223,6 +263,8 @@ Item {
                 }
 
                 NotificationHistory {
+                    // NotificationHistory hides itself when empty; keep that and add the page rule.
+                    visible: root.expanded !== "wifi" && Sys.notifHistory.length > 0
                     Layout.fillWidth: true
                 }
 

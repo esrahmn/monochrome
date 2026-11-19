@@ -1,6 +1,8 @@
 import QtQuick
 import "../../core"
 
+// Shared empty state: one title line (`dim`) and, if needed, one hint line (`faint`).
+// Default width = content; set `width` to center the text in a given area.
 Column {
     id: root
 

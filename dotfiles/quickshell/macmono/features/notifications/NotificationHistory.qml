@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import "../../core"
 import "../../shared/components"
 
+// Notification rows for the Control Center. Empty history = nothing shown (the panel collapses).
 ColumnLayout {
     id: root
 
@@ -20,6 +21,7 @@ ColumnLayout {
     }
 
     RowLayout {
+        // Only exists while the history does; an empty history still collapses the whole section.
         visible: Sys.notifHistory.length > 0
         Layout.fillWidth: true
 

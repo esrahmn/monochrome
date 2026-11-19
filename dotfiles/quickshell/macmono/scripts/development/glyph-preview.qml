@@ -4,6 +4,9 @@ import "../../core"
 import "../../shared/components"
 import "../../shared/components/GlyphPaths.js" as Icons
 
+// Side by side check of the vector icons (left) against the old canvas drawing (right),
+// at two sizes. Run:  qs -p scripts/development/glyph-preview.qml
+// Only icons present in GlyphPaths.js are listed.
 ShellRoot {
     FloatingWindow {
         title: "macmono glyph preview"

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Usage: kb-layout.sh <active_keymap> <layouts> <variants>
+# kb-layout.sh <active_keymap> <layouts> <variants>
+# Prints the short code of the active keyboard layout (e.g. "US", "ID").
+# Hyprland's event socket only reports the long name ("English (US)"), so the code
+# is looked up in the xkb layout list. Falls back to the first two letters of the name.
 set -u
 active="${1:-}"; layouts="${2:-}"; variants="${3:-}"
 lst="${XKB_CONFIG_ROOT:-/usr/share/X11/xkb}/rules/evdev.lst"

@@ -1,6 +1,11 @@
 import QtQuick
 import "../../core"
 
+// A number that chases `target` with a damped spring: the same integrator as Reveal, but for sizes
+// (px) instead of 0..1 progress. Used for the island's width and height while it is already open and
+// one panel morphs into another.
+//   springy: false  ->  the value follows the target directly, nothing animates
+// The overshoot past the target is capped in px, like Reveal's bounce.
 Item {
     id: root
     visible: false
@@ -15,6 +20,7 @@ Item {
     property real velocity: 0
     readonly property bool animating: frames.running
 
+    // +1 while growing, -1 while shrinking: the side on which the overshoot is capped.
     property int heading: 0
     property bool ready: false
 

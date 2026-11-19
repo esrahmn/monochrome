@@ -34,6 +34,7 @@ Item {
 
         requestedTrack = trackKey;
         requestGeneration++;
+        // → cache hit: pulihin tanpa network
         const cached = LyricsCache.get(trackKey);
         if (cached) {
             lines = cached.lines.slice();

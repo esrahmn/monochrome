@@ -17,24 +17,38 @@ import "../wallpaper"
 import "../../core"
 import "../../shared/components"
 
-// Island body: sizes and swaps panels; MenuBar draws the glass.
+// The body of the island: what drops out of the header.
+// It has no frame of its own. The island (MenuBar) draws the single glass surface and clips to it.
+// The host decides which panel is shown, how tall the body is, and how it appears.
+//
+// Two rules keep it feeling like one object:
+//   1. The panel is laid out once at its final width and centered. The island only reveals it,
+//      so nothing is squeezed or re-wrapped while the island grows.
+//   2. Switching panels morphs in place (fade out, resize, fade in). The island never closes in between.
 Item {
     id: root
 
     property string screenName: ""
     property string panelName: ""
     property real maxPanelHeight: 700
+    // Final width of the island while a body is shown. Set by the island.
     property real targetWidth: 0
+    // Where the body hangs off the bar: 0 = left edge fixed, 0.5 = centered, 1 = right edge fixed.
+    // The panel is laid out at its final width and held still on that side while the body grows around it.
     property real align: 0.5
     property string displayedPanel: ""
     property string pendingPanel: ""
     property bool revealOpen: false
+    // 1 = content visible. Dips to 0 while the island morphs from one panel to another.
     property real swapFade: 1
 
+    // The island reads these so its width and height follow the same spring.
     readonly property real progress: reveal.progress
     readonly property real travel: reveal.travel
+    // The width has its own spring: faster on the way out, slower on the way back (see Theme).
     readonly property real widthProgress: widthReveal.progress
     readonly property real widthTravel: widthReveal.travel
+    // Notifications are a transient body: no shortcut, no focus, no dismiss layer.
     readonly property bool toastMode: displayedPanel === "notifications"
 
     readonly property bool shown: panelName !== "" && (panelName === "notifications"
@@ -46,6 +60,9 @@ Item {
     readonly property real desiredWidth: activeItem?.implicitWidth ?? 0
     readonly property real targetHeight: Math.min(contentHeight, Math.max(1, maxPanelHeight))
 
+    // Follows the panel's own height when it grows or shrinks while open (Wi-Fi list, media starting,
+    // a switch to another panel), on a spring so it settles with the same give as the opening. While the
+    // drawer itself is opening or closing the value is set directly, so nothing animates twice.
     readonly property real settledHeight: heightSpring.value
     SpringValue {
         id: heightSpring
@@ -110,9 +127,11 @@ Item {
             displayedPanel = requested;
             revealOpen = true;
         } else if (revealOpen && reveal.progress > 0.9) {
+            // Open and switching: morph in place.
             pendingPanel = requested;
             swapAnim.restart();
         } else {
+            // Still opening or already closing: let it finish, then open the new one.
             pendingPanel = requested;
             revealOpen = false;
         }
@@ -132,6 +151,7 @@ Item {
     Component { id: wallpaperComponent; WallpaperPanel { panelScreen: root.screenName } }
     Component { id: overviewComponent; OverviewPanel { panelScreen: root.screenName } }
 
+    // Closed for real only when both springs are at rest (the width trails the height on the way back).
     function finishClose() {
         if (revealOpen || reveal.animating || widthReveal.animating)
             return;
@@ -145,6 +165,7 @@ Item {
         }
     }
 
+    // Height spring. It also paces the content fade. Softer and bouncier on the way out, quicker on the way back.
     Reveal {
         id: reveal
         open: root.revealOpen
@@ -159,6 +180,7 @@ Item {
         }
     }
 
+    // Width spring: leads on the way out, trails on the way back, so the shape stretches instead of scaling.
     Reveal {
         id: widthReveal
         open: root.revealOpen
@@ -171,6 +193,7 @@ Item {
         }
     }
 
+    // Old content fades out, the panel is swapped, new content fades in while the island resizes.
     SequentialAnimation {
         id: swapAnim
         NumberAnimation { target: root; property: "swapFade"; to: 0; duration: Theme.durFast; easing.type: Theme.easeIn }
@@ -193,15 +216,21 @@ Item {
         id: content
         anchors {
             top: parent.top
+            // Slides down out of the header while it fades in.
             topMargin: -Theme.space8 * (1 - reveal.progress)
         }
         x: (root.width - width) * root.align
+        // Final width, not the island's current width (see rule 1 above).
         width: root.targetWidth > 0 ? root.targetWidth : root.width
         height: root.settledHeight
+        // The shape opens first, the content arrives a beat later and comes into focus as it does.
+        // 0 = hidden and blurred, 1 = settled. It also dips while one panel morphs into another.
         readonly property real fade: reveal.span(0.2, 0.85) * root.swapFade
         opacity: fade
         enabled: root.revealOpen
         clip: true
+        // The blur layer exists only while the content is still arriving: once settled it is a plain
+        // item again, so a panel that stays open costs nothing.
         layer.enabled: Settings.islandBlur && fade < 0.999
         layer.effect: MultiEffect {
             blurEnabled: true
@@ -241,6 +270,8 @@ Item {
             sourceComponent: visible || item !== null ? emojiComponent : null
         }
 
+        // The overview is built once and then only hidden. Rebuilding it on every open meant
+        // recreating every cell and window preview. While hidden it holds no capture streams.
         Loader {
             id: overviewLoader
             anchors.fill: parent

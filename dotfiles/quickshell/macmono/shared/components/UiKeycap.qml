@@ -1,6 +1,7 @@
 import QtQuick
 import "../../core"
 
+// Shared keycap (Cheatsheet, Settings > Shortcuts). Sized by the `cheatsheetKeycap*` tokens in Theme.
 Rectangle {
     id: root
 

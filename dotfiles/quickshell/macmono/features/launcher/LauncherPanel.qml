@@ -19,16 +19,18 @@ Item {
     readonly property int launcherMenuGridColumns: 5
     readonly property int launcherMenuMaxGridRows: 3
     readonly property int launcherMenuCellHeight: 100
-    readonly property int launcherMenuDragEdge: 40
-    readonly property int launcherMenuDragStep: 14
+    readonly property int launcherMenuDragEdge: 40   // px from the grid edge where drag autoscroll starts
+    readonly property int launcherMenuDragStep: 14   // max px per tick (16 ms)
     readonly property int launcherMenuIconBox: 46
     readonly property int launcherMenuIcon: 22
     readonly property int launcherMenuAvatar: 24
     readonly property int launcherCtxWidth: 210
     readonly property int launcherCtxRowHeight: 34
     implicitWidth: launcherMenuWidth
+    // Keep the launcher compact for small groups, and grow it only when results need more rows.
     readonly property int launcherMenuVisibleRows: Math.max(1, Math.min(launcherMenuMaxGridRows,
         Math.ceil(shownApps.length / launcherMenuGridColumns)))
+    // The rail lists every group, so the body is never shorter than the rail.
     readonly property int launcherMenuRailNatural: (2 + activeCats.length) * launcherMenuRailItem + Theme.space16
     readonly property int launcherMenuBodyNatural: Math.min(launcherMenuBodyHeight, Math.max(launcherMenuRailNatural,
         Theme.listHeaderHeight + launcherMenuVisibleRows * launcherMenuCellHeight + Theme.space16))
@@ -102,6 +104,7 @@ Item {
         SettingsStore.apply({ pinnedApps: keep }, []);
     }
 
+    // Pins that no longer resolve to an installed app are kept, after the visible ones.
     function reorderPinned(from, to) {
         const n = root.favoriteEntries.length;
         if (from === to || from < 0 || to < 0 || from >= n || to >= n) return;
@@ -142,8 +145,11 @@ Item {
         return m;
     }
 
+    // Categories with no installed apps are not shown at all.
     readonly property var activeCats: root.cats.filter(c => (root.counts[c.key] || 0) > 0)
 
+    // The panel opens on the first non-empty group: pinned first, then recent,
+    // then the first populated category.
     function firstCategory() {
         if (root.counts.fav > 0) return "fav";
         if (root.counts.recent > 0) return "recent";
@@ -187,6 +193,7 @@ Item {
         root.recentIds = ids.slice(0, root.recentMax);
     }
 
+    // DesktopAction.execute() ignores runInTerminal, so terminal apps get no actions.
     function ctxItems(entry) {
         const out = [{ kind: "open", label: "Open" }];
         if (!entry.runInTerminal) {
@@ -254,6 +261,7 @@ Item {
         onTriggered: root.armed = ""
     }
 
+    // One group in the left rail.
     component RailItem: Rectangle {
         id: ri
         required property string label
@@ -294,6 +302,7 @@ Item {
         }
     }
 
+    // Round, icon only. Asking for confirmation grows it into a pill that says so.
     component PowerButton: Rectangle {
         readonly property int launcherMenuPowerSize: 32
         id: pb
@@ -464,6 +473,8 @@ Item {
             keyCatcher.forceActiveFocus();
         }
 
+        // Keyboard navigation: arrows or Ctrl+J/K/N/P move the grid selection,
+        // Tab/Shift+Tab switch category (or move the selection while searching), Enter opens.
         function handleKey(e) {
             if (win.ctxOpen && win.handleCtxKey(e)) return true;
             const shift = (e.modifiers & Qt.ShiftModifier) !== 0;
@@ -711,6 +722,7 @@ Item {
                         width: col.width
                         height: win.bodyHeight
 
+                        // Groups, one per row, with how many apps each holds.
                         Flickable {
                             id: rail
                             anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
@@ -949,6 +961,8 @@ Item {
                                 color: Theme.tile
                                 border.width: Theme.borderThin
                                 border.color: Theme.line
+                                // User photo from AccountsService (same source as
+                                // Control Center); the initial is only a fallback if the file is missing.
                                 ClippingRectangle {
                                     anchors.fill: parent
                                     radius: parent.radius

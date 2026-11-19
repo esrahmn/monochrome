@@ -31,6 +31,7 @@ RowLayout {
             Layout.preferredWidth: 1
             Layout.preferredHeight: root.ccNetworkTileHeight
             active: isOn
+            // Tile body opens the list; the icon on the left toggles on/off.
             onClicked: root.requestExpand(modelData)
 
             function toggle() {

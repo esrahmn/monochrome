@@ -1,11 +1,12 @@
 #!/bin/sh
-# Log out of Hyprland; log: ~/.local/state/macmono/session.log
+# Log out of Hyprland. Log: ~/.local/state/macmono/session.log
 
 log="$HOME/.local/state/macmono/session.log"
 mkdir -p "$(dirname "$log")"
 [ -f "$log" ] && [ "$(wc -c <"$log")" -gt 200000 ] && : >"$log"
 exec >>"$log" 2>&1
 
+# Run outside macmono.service so the script survives the shell dying with the compositor.
 if [ -z "$MACMONO_SESSION_SCOPED" ] && command -v systemd-run >/dev/null 2>&1; then
     export MACMONO_SESSION_SCOPED=1
     exec systemd-run --user --scope --quiet --collect --slice=app.slice -- sh "$0" "$@"
@@ -13,6 +14,7 @@ fi
 
 say() { echo "[$(date +%T)] $*"; }
 
+# A zombie Hyprland still shows up in pgrep, so check the process state too.
 alive() {
     for p in $(pgrep -x Hyprland 2>/dev/null); do
         read -r _ _ state _ <"/proc/$p/stat" 2>/dev/null || continue

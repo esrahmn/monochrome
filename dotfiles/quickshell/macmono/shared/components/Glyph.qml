@@ -3,7 +3,11 @@ import QtQuick.Shapes
 import "../../core"
 import "GlyphPaths.js" as Icons
 
-// Vector icons from GlyphPaths.js; unknown names fall back to GlyphLegacy.
+// Icon. Same API as before (name, color, thickness, size).
+// Icons found in GlyphPaths.js are vector paths drawn by the GPU: changing the color
+// only changes a value, nothing is redrawn into an image. Icons that are not there yet
+// fall back to the old canvas drawing (GlyphLegacy.qml), so migrating is gradual.
+// Update the data with scripts/development/fetch-icons.py.
 Item {
     id: root
 
@@ -22,6 +26,7 @@ Item {
         visible: root.icon !== null
         width: root.icon ? root.icon.w : 1
         height: width
+        // The paths live in their own grid (usually 24): scale that grid to the item.
         scale: Math.min(root.width, root.height) / width
         transformOrigin: Item.TopLeft
         preferredRendererType: Shape.CurveRenderer

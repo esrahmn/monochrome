@@ -6,7 +6,7 @@ import "../../core"
 
 Scope {
     id: root
-    readonly property int frameRadius: 2
+    readonly property int frameRadius: 2   // selection frame, nearly sharp corners
 
     readonly property int selectorBadgeHeight: 24
     readonly property int selectorHintHeight: 34

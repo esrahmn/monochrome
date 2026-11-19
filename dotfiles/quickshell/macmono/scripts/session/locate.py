@@ -19,12 +19,12 @@ try:
 
     gi.require_version("Gio", "2.0")
     from gi.repository import Gio, GLib
-except Exception as exc:
+except Exception as exc:  # python-gobject is missing
     print(json.dumps({"ok": False, "code": "nogi", "error": str(exc)}))
     sys.exit(0)
 
 DESKTOP_ID = "macmono"
-CITY = 4
+CITY = 4  # GClueAccuracyLevel: country 1, city 4, neighborhood 5, street 6, exact 8
 BUS = "org.freedesktop.GeoClue2"
 PROPS = "org.freedesktop.DBus.Properties"
 CLIENT = BUS + ".Client"
