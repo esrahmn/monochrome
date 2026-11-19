@@ -6,7 +6,8 @@ pragma Singleton
 Singleton {
     id: root
 
-    readonly property string dir: Quickshell.env("HOME") + "/.config/macmono"
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+    readonly property string dir: configHome + "/macmono"
     readonly property string path: dir + "/settings.json"
     property bool storageReady: false
     property var data: ({

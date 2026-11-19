@@ -141,7 +141,7 @@ Scope {
 
                 readonly property int sidePad: Theme.islandSidePad
                 readonly property int zoneGap: Theme.islandZoneGap
-                readonly property real barRadius: Math.min(Theme.radiusPanel, root.islandHeight / 2)
+                readonly property real barRadius: Math.min(Theme.radiusBar, root.islandHeight / 2)
 
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.top

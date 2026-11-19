@@ -11,8 +11,9 @@ Scope {
     property string lastAction: ""
     signal resetApplied()
 
-    readonly property string settingsPath: Quickshell.env("HOME") + "/.config/macmono/settings.json"
-    readonly property string generatedPath: Quickshell.env("HOME") + "/.config/hypr/custom/macmono-generated.lua"
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+    readonly property string settingsPath: configHome + "/macmono/settings.json"
+    readonly property string generatedPath: configHome + "/hypr/custom/macmono-generated.lua"
     readonly property string backupDir: Quickshell.env("HOME") + "/.local/state/macmono/backups"
 
     property string pending: ""

@@ -16,7 +16,7 @@ esac
 cmd="${1:-}"
 [ $# -gt 0 ] && shift
 
-DIR="$HOME/.config/hypr/custom"
+DIR="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/custom"
 F="$DIR/macmono-generated.lua"
 B="$F.bak"
 LEGACY="$DIR/macmono-generated-input.lua"

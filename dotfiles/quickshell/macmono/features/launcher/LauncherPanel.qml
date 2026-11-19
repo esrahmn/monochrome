@@ -31,7 +31,8 @@ Item {
     readonly property int launcherMenuVisibleRows: Math.max(1, Math.min(launcherMenuMaxGridRows,
         Math.ceil(shownApps.length / launcherMenuGridColumns)))
     // The rail lists every group, so the body is never shorter than the rail.
-    readonly property int launcherMenuRailNatural: (2 + activeCats.length) * launcherMenuRailItem + Theme.space16
+    readonly property int launcherMenuRailNatural: (2 + activeCats.length) * launcherMenuRailItem
+        + (1 + activeCats.length) * Theme.space2 + Theme.space16
     readonly property int launcherMenuBodyNatural: Math.min(launcherMenuBodyHeight, Math.max(launcherMenuRailNatural,
         Theme.listHeaderHeight + launcherMenuVisibleRows * launcherMenuCellHeight + Theme.space16))
     implicitHeight: launcherMenuSearchHeight + launcherMenuBodyNatural
@@ -664,7 +665,7 @@ Item {
                         }
                         TextInput {
                             id: input
-                            anchors { left: searchGlyph.right; leftMargin: Theme.space12; right: searchHint.left; rightMargin: Theme.space12; verticalCenter: parent.verticalCenter }
+                            anchors { left: searchGlyph.right; leftMargin: Theme.space12; right: parent.right; rightMargin: Theme.space24; verticalCenter: parent.verticalCenter }
                             color: Theme.text
                             selectionColor: Theme.tileHover
                             selectedTextColor: Theme.text
@@ -688,26 +689,6 @@ Item {
                                 text: "Search apps…"
                                 color: Theme.dim
                                 font: input.font
-                            }
-                        }
-
-                        Rectangle {
-                            id: searchHint
-                            anchors { right: parent.right; rightMargin: Theme.space24; verticalCenter: parent.verticalCenter }
-                            width: 40
-                            height: Theme.space24
-                            radius: Theme.radiusControl
-                            color: Theme.tile
-                            border.width: Theme.borderThin
-                            border.color: Theme.line
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "ESC"
-                                color: Theme.dim
-                                font.family: Theme.font
-                                font.pixelSize: Theme.fontXs
-                                font.weight: Theme.weightSemibold
                             }
                         }
                     }

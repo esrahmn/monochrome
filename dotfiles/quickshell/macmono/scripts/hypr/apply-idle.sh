@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -u
 umask 077
-F="$HOME/.config/hypr/hypridle.conf"
+F="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hypridle.conf"
 B="$F.macmono.bak"
 SHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 

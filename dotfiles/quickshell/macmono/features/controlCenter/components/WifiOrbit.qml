@@ -17,6 +17,8 @@ Item {
     readonly property int orbitMaxNodes: 10
     readonly property int orbitEdge: 24             // room past the outer ring for a dot and its label
     readonly property int orbitCaptionHeight: 28
+    // Labels hang below their dots, so the dots at the bottom of the orbit need extra room above the footer.
+    readonly property int orbitLabelRoom: 20
     readonly property real orbitHalf: orbitRadii[2] + orbitEdge
     readonly property real orbitIntroDelay: 0.12    // the core arrives first, then the dots
     readonly property real orbitMinOpacity: 0.55    // weakest network, so labels stay readable
@@ -34,7 +36,7 @@ Item {
 
     readonly property real cx: width / 2
     readonly property real cy: orbitCaptionHeight + orbitHalf
-    readonly property real sceneHeight: orbitCaptionHeight + 2 * orbitHalf
+    readonly property real sceneHeight: orbitCaptionHeight + 2 * orbitHalf + orbitLabelRoom
     readonly property bool connecting: Sys.wifiConnecting !== ""
 
     // The network a password is being asked for ("" = not asking). The panel reads `typing` to stay open.

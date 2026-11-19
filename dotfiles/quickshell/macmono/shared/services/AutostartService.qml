@@ -9,7 +9,8 @@ Scope {
     property bool loading: false
     property string error: ""
 
-    readonly property string userDir: Quickshell.env("HOME") + "/.config/autostart"
+    readonly property string configHome: Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")
+    readonly property string userDir: configHome + "/autostart"
 
     function baseName(p) {
         const s = String(p ?? "");
@@ -18,7 +19,7 @@ Scope {
     }
 
     readonly property string listScript:
-        "for d in /etc/xdg/autostart \"$HOME/.config/autostart\"; do " +
+        "for d in /etc/xdg/autostart \"${XDG_CONFIG_HOME:-$HOME/.config}/autostart\"; do " +
         "[ -d \"$d\" ] || continue; " +
         "for f in \"$d\"/*.desktop; do " +
         "[ -f \"$f\" ] || continue; " +
@@ -40,11 +41,11 @@ Scope {
 
     readonly property string addScript:
         "id=$1; case \"$id\" in ''|*/*) exit 1;; esac; " +
-        "dst=\"$HOME/.config/autostart/$id.desktop\"; [ -e \"$dst\" ] && exit 0; " +
+        "dst=\"${XDG_CONFIG_HOME:-$HOME/.config}/autostart/$id.desktop\"; [ -e \"$dst\" ] && exit 0; " +
         "for d in \"$HOME/.local/share/applications\" /usr/local/share/applications /usr/share/applications " +
         "/var/lib/flatpak/exports/share/applications \"$HOME/.local/share/flatpak/exports/share/applications\"; do " +
         "[ -f \"$d/$id.desktop\" ] || continue; " +
-        "mkdir -p \"$HOME/.config/autostart\" || exit 1; " +
+        "mkdir -p \"${XDG_CONFIG_HOME:-$HOME/.config}/autostart\" || exit 1; " +
         "sed -E '/^Exec=/ s/ %[fFuUdDnN]//g' \"$d/$id.desktop\" > \"$dst.tmp\" && mv \"$dst.tmp\" \"$dst\" || exit 1; " +
         "exit 0; done; exit 3"
 

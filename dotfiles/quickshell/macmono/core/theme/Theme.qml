@@ -42,6 +42,8 @@ Singleton {
 
     // ---- Shape and icons. Pill = height / 2.
     readonly property int radiusPanel: 20
+    // Corners of the bar itself (the island's top strip). Smaller than radiusPanel so the bar is not a full pill.
+    readonly property int radiusBar: 10
     readonly property int radiusCard: 12
     readonly property int radiusControl: 8
     readonly property int borderThin: 1
