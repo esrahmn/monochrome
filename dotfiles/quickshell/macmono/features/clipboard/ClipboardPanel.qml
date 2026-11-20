@@ -83,7 +83,6 @@ Item {
         anchors.fill: parent
         readonly property bool shown: Sys.activePanel === "clipboard" && Sys.activePanelScreen === root.panelScreen
 
-
         readonly property var filtered: root.entries
         property int current: 0
         readonly property var sel: filtered[current] ?? null
@@ -146,7 +145,6 @@ Item {
             detailFor = "";
             keyNav.forceActiveFocus();
         }
-
 
         Item {
             id: panel
@@ -250,7 +248,6 @@ Item {
                     height: Theme.borderThin
                     color: Theme.line
                 }
-
 
                 ListView {
                     id: list

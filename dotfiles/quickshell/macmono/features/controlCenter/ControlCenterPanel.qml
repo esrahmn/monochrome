@@ -19,7 +19,7 @@ Item {
     readonly property int ccHeaderButtonSize: 40
     property string expanded: ""
     property int playerIndex: -1
-    readonly property var player: Sys.mediaPlayer(Mpris.players.values, playerIndex)
+    readonly property var player: Sys.mediaPlayer(Sys.mediaPlayers, playerIndex)
     readonly property bool typing: wifiOrbit.typing
     readonly property bool holdOpen: typing || Sys.wifiConnecting !== ""
 
@@ -97,8 +97,6 @@ Item {
                         radius: Math.min(width, height) / 2
                         color: Theme.tileHover
 
-                        // Round avatar without a color effect: ClippingRectangle clips the corners directly,
-                        // with no separate layer mask + shader effect (two offscreen renders).
                         ClippingRectangle {
                             anchors.fill: parent
                             radius: parent.radius
@@ -198,7 +196,6 @@ Item {
 
                 }
 
-                // Wi-Fi page: a back row on top, the list below. The rest of the panel is hidden meanwhile.
                 MouseArea {
                     id: wifiBack
                     visible: root.expanded === "wifi"
@@ -252,10 +249,9 @@ Item {
                 }
 
                 CcMedia {
-                    // CcMedia hides itself without a player; keep that and add the page rule.
                     visible: root.expanded !== "wifi" && root.player !== null
                     player: root.player
-                    players: Mpris.players.values
+                    players: Sys.mediaPlayers
                     panelShown: root.shown
                     onPlayerChangeRequested: (index) => {
                         return root.playerIndex = index;
@@ -263,7 +259,6 @@ Item {
                 }
 
                 NotificationHistory {
-                    // NotificationHistory hides itself when empty; keep that and add the page rule.
                     visible: root.expanded !== "wifi" && Sys.notifHistory.length > 0
                     Layout.fillWidth: true
                 }

@@ -60,7 +60,6 @@ Rectangle {
             Layout.fillWidth: true
             spacing: Theme.space12
 
-            // Tap the cover to switch player (only when more than one is running).
             MouseArea {
                 id: artArea
                 Layout.preferredWidth: root.ccMediaArtSize
@@ -139,8 +138,6 @@ Rectangle {
                         required property string modelData
                         readonly property bool big: modelData === "toggle"
                         readonly property int buttonSize: big ? root.ccMediaBigButton : root.ccMediaSmallButton
-                        // RowLayout centers each control, so prev/next sit on the play/pause circle's axis instead of
-                        // hugging the top of the row (a plain Row aligns children to the top when heights differ).
                         Layout.alignment: Qt.AlignVCenter
                         Layout.preferredWidth: control.buttonSize
                         Layout.preferredHeight: control.buttonSize

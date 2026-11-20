@@ -27,7 +27,6 @@ Column {
     }
     function mute(name) { SettingsStore.apply({ notifMutedApps: (Settings.notifMutedApps ?? []).concat([name]) }, []); }
 
-    // Fixed presets, so the choice stays predictable instead of a free-form number.
     readonly property var notifDurations: [
         { ms: 2000, label: "2s" },
         { ms: 3000, label: "3s" },
@@ -45,7 +44,6 @@ Column {
         font.letterSpacing: Theme.trackCaps
         leftPadding: SettingsMetrics.settingsRowPadX
     }
-
 
     SettingsNotifPreview {
         width: root.width
@@ -82,7 +80,6 @@ Column {
             onToggled: (v) => { Sys.dnd = v; }
         }
     }
-
 
     SettingsRow {
         width: root.width

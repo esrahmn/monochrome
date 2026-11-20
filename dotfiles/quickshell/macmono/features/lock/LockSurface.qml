@@ -28,7 +28,7 @@ Item {
 
     readonly property int cardWidth: 400
     readonly property int clockSize: 120
-    readonly property var player: Sys.mediaPlayer(Mpris.players.values, -1)
+    readonly property var player: Sys.mediaPlayer(Sys.mediaPlayers, -1)
     readonly property string userName: lock.fullName || (Quickshell.env("USER") ?? "")
 
     Image {
@@ -37,7 +37,7 @@ Item {
         source: Sys.wallpaper !== "" ? "file://" + Sys.wallpaper : ""
         sourceSize.width: 2560
         fillMode: Image.PreserveAspectCrop
-        asynchronous: false      // first frame must already be the wallpaper, not a black screen
+        asynchronous: false
         cache: true
         visible: false
     }
@@ -46,7 +46,7 @@ Item {
         source: wall
         autoPaddingEnabled: false
         blurEnabled: true
-        blur: reveal.progress    // 0 = same as desktop; rises to 1 on lock, falls on unlock
+        blur: reveal.progress
         blurMax: 48
         saturation: Sys.wallpaperMono ? -1.0 : 0.0
         brightness: root.lockWallpaperDim * reveal.progress
@@ -59,8 +59,6 @@ Item {
         onPressed: input.forceActiveFocus()
     }
 
-    // Masuk: wallpaper desktop -> blur + redup, elemen naik berurutan. Keluar (unlock): kebalikannya,
-    // then LockScreen.finishUnlock() opens the session. The surface is destroyed after the scene ends.
     readonly property int rise: 28
     Reveal {
         id: reveal

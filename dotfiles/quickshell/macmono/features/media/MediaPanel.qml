@@ -11,7 +11,7 @@ Item {
     readonly property bool shown: Sys.activePanel === "media" && Sys.activePanelScreen === panelScreen
     readonly property int mediaPopupLyricsHeight: 210
     property int playerIndex: -1
-    readonly property var p: Sys.mediaPlayer(Mpris.players.values, playerIndex)
+    readonly property var p: Sys.mediaPlayer(Sys.mediaPlayers, playerIndex)
 
     implicitWidth: Sys.mediaPopupWidth
     implicitHeight: p ? content.implicitHeight + lyrics.height + Theme.space16 * 3 : empty.implicitHeight + Theme.space16 * 2
@@ -78,7 +78,7 @@ Item {
             visible: root.p !== null
             roomy: true
             player: root.p
-            players: Mpris.players.values
+            players: Sys.mediaPlayers
             panelShown: root.shown
             onPlayerChangeRequested: (index) => {
                 return root.playerIndex = index;

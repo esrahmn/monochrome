@@ -42,7 +42,6 @@ Column {
     Timer { interval: 30000; repeat: true; running: root.visible && Sys.settingsOpen; onTriggered: root.tick++ }
     Timer { id: copiedTimer; interval: 1600; onTriggered: root.copied = false }
 
-
     function clean(s) { return String(s ?? "").trim(); }
     function junk(s) { return /o\.e\.m|default string|system (manufacturer|product)|not specified|^none$/i.test(s); }
 
@@ -217,7 +216,6 @@ Column {
         onStarted: { write(root.report()); stdinEnabled = false; }
     }
 
-
     component SectionLabel: SettingsText {
         readonly property int aboutSectionGap: 32
         topPadding: aboutSectionGap
@@ -256,7 +254,6 @@ Column {
         Accessible.role: Accessible.Button
         Accessible.name: pb.label
     }
-
 
     Column {
         id: page

@@ -7,8 +7,8 @@ Image {
     id: root
 
     property string wallpaperPath: ""
-    property real reveal: 0          // when the incoming layer: change progress 0..1 (linear)
-    property var partner: null      // layer lawan; progres masuknya = progres keluar kita
+    property real reveal: 0
+    property var partner: null
     property bool outgoing: false
     property int dir: 1
     property real pixelWidth: 0

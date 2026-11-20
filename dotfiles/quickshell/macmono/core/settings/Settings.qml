@@ -132,7 +132,6 @@ Singleton {
 
     readonly property int overviewPreviewRetryMs: SettingsStore.v("overviewPreviewRetryMs", 700)
 
-
     readonly property int launcherSectionHeaderHeight: 28
 
     readonly property int lockBoltIconSize: 14

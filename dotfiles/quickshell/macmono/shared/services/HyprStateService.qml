@@ -3,12 +3,6 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 
-// Turns Hyprland's event socket (read through Quickshell) into small, ready-to-use state:
-//   layoutCode / layoutCount  active keyboard layout, for the bar indicator
-//   fullscreen                the focused workspace has a fullscreen window (pause decorative work)
-//   configReloaded()          Hyprland finished reloading its config
-// Events only trigger a refresh. The data itself is read with hyprctl, debounced, and
-// nothing runs unless an event arrives.
 Scope {
     id: root
 
@@ -37,12 +31,10 @@ Scope {
     Connections {
         target: Hyprland
         function onRawEvent(event) {
-            // The event object is reused by Quickshell: read everything inside the handler.
             const name = event.name;
             if (name === "activelayout") {
                 layoutDebounce.restart();
             } else if (name === "fullscreen") {
-                // 1 / 0 for the active window. The query below confirms it for the workspace.
                 root.fullscreen = String(event.data).trim() === "1";
                 fsDebounce.restart();
             } else if (name === "configreloaded") {
@@ -58,7 +50,6 @@ Scope {
     Timer { id: layoutDebounce; interval: root.debounceMs; onTriggered: root.refreshLayout() }
     Timer { id: fsDebounce; interval: root.debounceMs; onTriggered: root.refreshFullscreen() }
 
-    // ---- keyboard layout ----
     function refreshLayout() {
         if (devProc.running || codeProc.running) { layoutPending = true; return; }
         devProc.running = true;
@@ -82,7 +73,6 @@ Scope {
         const active = String(main.active_keymap ?? "");
         layoutCount = Math.max(1, layouts.split(",").filter(s => s.trim() !== "").length);
 
-        // The long name -> short code lookup is cached: a layout switch only runs the script once.
         const key = active + "|" + layouts + "|" + variants;
         if (codeCache[key] !== undefined) { layoutCode = codeCache[key]; return; }
         pendingKey = key;
@@ -109,7 +99,6 @@ Scope {
         onExited: root.layoutIdle()
     }
 
-    // ---- fullscreen ----
     function refreshFullscreen() {
         if (fsProc.running) { fullscreenPending = true; return; }
         fsProc.running = true;
@@ -121,7 +110,6 @@ Scope {
             onStreamFinished: {
                 try {
                     const w = JSON.parse(text);
-                    // If the field is ever missing, keep the value the event gave.
                     if (typeof w.hasfullscreen === "boolean") root.fullscreen = w.hasfullscreen;
                 } catch (e) {}
             }

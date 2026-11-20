@@ -14,7 +14,6 @@ Scope {
             property bool failed: false
                 property int attempts: 0
                     property bool capsLock: false
-                        // PAM success: play the exit scene first; the session only really opens in finishUnlock().
                         property bool unlocking: false
                             property string fullName: ""
 
@@ -99,7 +98,6 @@ Scope {
                                     }
                                 }
 
-                                // Safety net: if the exit scene never finishes, open the session anyway.
                                 Timer { id: unlockFallback; interval: 1500; onTriggered: root.finishUnlock() }
 
                                 Timer {

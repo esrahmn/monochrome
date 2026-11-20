@@ -8,7 +8,6 @@ Column {
     readonly property int settingsMeterHeight: 6
     spacing: 0
 
-
     component SectionLabel: SettingsText {
         property bool first: false
         topPadding: first ? 0 : SettingsMetrics.settingsGroupSpacing
@@ -192,7 +191,6 @@ Column {
 
     function setVis(key, value) { SettingsStore.apply(({ [key]: value }), []); }
 
-
     SectionLabel { first: true; text: "OUTPUT" }
 
     Card {
@@ -242,7 +240,6 @@ Column {
             }
         }
     }
-
 
     SectionLabel { text: "INPUT" }
 
@@ -307,7 +304,6 @@ Column {
         }
     }
 
-
     SectionLabel { text: "APPLICATIONS" }
 
     Card {
@@ -371,7 +367,6 @@ Column {
             }
         }
     }
-
 
     SectionLabel { text: "MUSIC VISUALIZER" }
 

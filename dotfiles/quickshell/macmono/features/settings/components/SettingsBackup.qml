@@ -48,7 +48,6 @@ Column {
         onTriggered: root.armed = ""
     }
 
-
     SettingsCaps { first: true; text: "BACKUP" }
 
     SettingsNote {
@@ -85,7 +84,6 @@ Column {
         color: Theme.dim
         font.pixelSize: Theme.fontSm
     }
-
 
     SettingsCaps {
         visible: root.svc.backups.length > 0
@@ -156,7 +154,6 @@ Column {
         font.pixelSize: Theme.fontSm
     }
 
-
     Item {
         width: root.width
         height: SettingsMetrics.settingsGroupSpacing * 2
@@ -169,7 +166,6 @@ Column {
             color: Theme.line
         }
     }
-
 
     SettingsCaps { first: true; text: "RESET" }
 

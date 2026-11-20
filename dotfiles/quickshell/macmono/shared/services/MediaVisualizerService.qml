@@ -6,16 +6,13 @@ import Quickshell.Services.Mpris
 Item {
     id: root
 
-    readonly property var activePlayer: Mpris.players.values.find(player => player.isPlaying) ?? null
+    readonly property var activePlayer: Mpris.players.values.find(player => player.isPlaying && String(player.trackTitle ?? "") !== "") ?? null
     readonly property bool active: activePlayer !== null
     property bool enabled: true
     property bool wanted: true
     property bool forceRun: false
-    // Set while a fullscreen window covers the bar: no point drawing a wave nobody can see.
     property bool paused: false
     property real gain: 1.0
-    // Only the starting size of `levels`. The real bar count comes from `bars` in features/media/config/cava-mini.conf:
-    // every frame is accepted whatever its length, and the wave draws as many points as it gets.
     readonly property int bars: 24
     property var levels: Array(bars).fill(0)
 

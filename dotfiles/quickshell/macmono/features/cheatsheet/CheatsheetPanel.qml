@@ -37,7 +37,6 @@ Item {
             width: win.width
             clip: true
 
-
             Flickable {
                 id: flick
                 anchors { fill: parent; margins: root.cheatsheetPadding }

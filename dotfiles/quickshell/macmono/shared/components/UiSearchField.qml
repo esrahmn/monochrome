@@ -2,11 +2,6 @@ import QtQuick
 import "../../core"
 import "."
 
-// Shared search field. One behavior for every panel:
-// - Esc clears the text first; when already empty it emits `escaped` (the owner closes the panel).
-// - 1 px `lineFocus` ring when active; text selection uses the accent.
-// - Navigation keys (arrows, Enter, PageUp/Down) are handled by the owner via `keyPressed`; set `event.accepted = true` when used.
-// `forceActiveFocus()` on this component moves focus to its text input.
 FocusScope {
     id: root
 
@@ -15,12 +10,9 @@ FocusScope {
     property alias text: input.text
     property alias field: input
     property string placeholder: ""
-    // true: `tile` box + focus ring. false: plain row (for headers that already have their own line).
     property bool boxed: true
-    // Box shape. Pill: radius: height / 2.
     property real radius: Theme.radiusCard
     property real padX: Theme.space16
-    // false: when empty, Esc is passed up (for pages that close themselves).
     property bool escapeAccepted: true
 
     signal accepted()

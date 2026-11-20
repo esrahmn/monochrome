@@ -135,7 +135,6 @@ Item {
             return false;
         }
 
-
         onShownChanged: {
             if (!shown)
                 return;
@@ -144,7 +143,6 @@ Item {
             grid.contentY = 0;
             keyCatcher.forceActiveFocus();
         }
-
 
         Item {
             id: panel

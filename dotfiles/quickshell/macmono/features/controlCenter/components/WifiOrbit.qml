@@ -2,28 +2,22 @@ import QtQuick
 import "../../../core"
 import "../../../shared/components"
 
-// Wi-Fi as an orbit: the network you are on sits in the middle, the others circle it.
-// Ring = signal tier (strong inner, weak outer). Filled dot = saved network, hollow dot = new one.
-// Click a dot to join it; a new secured network asks for its password first.
 Item {
     id: root
 
     readonly property int orbitCenterSize: 64
     readonly property var orbitRadii: [60, 100, 140]
-    // Laps per turn of `spin`. Whole numbers only, so the loop has no jump when `spin` wraps around.
     readonly property var orbitSpin: [1, -1, 1]
     readonly property int orbitDot: 12
     readonly property int orbitLabelWidth: 72
     readonly property int orbitMaxNodes: 10
-    readonly property int orbitEdge: 24             // room past the outer ring for a dot and its label
+    readonly property int orbitEdge: 24
     readonly property int orbitCaptionHeight: 28
-    // Labels hang below their dots, so the dots at the bottom of the orbit need extra room above the footer.
     readonly property int orbitLabelRoom: 20
     readonly property real orbitHalf: orbitRadii[2] + orbitEdge
-    readonly property real orbitIntroDelay: 0.12    // the core arrives first, then the dots
-    readonly property real orbitMinOpacity: 0.55    // weakest network, so labels stay readable
+    readonly property real orbitIntroDelay: 0.12
+    readonly property real orbitMinOpacity: 0.55
     readonly property real orbitHoverScale: 1.3
-    // Signal strength (percent) that decides the ring.
     readonly property int orbitStrong: 60
     readonly property int orbitMedium: 35
 
@@ -39,7 +33,6 @@ Item {
     readonly property real sceneHeight: orbitCaptionHeight + 2 * orbitHalf + orbitLabelRoom
     readonly property bool connecting: Sys.wifiConnecting !== ""
 
-    // The network a password is being asked for ("" = not asking). The panel reads `typing` to stay open.
     property string pwFor: ""
     readonly property bool typing: pwFor !== ""
     property bool hovering: false
@@ -79,10 +72,8 @@ Item {
         }
     }
 
-    // One spring for the whole scene; each part takes its own slice of it (see Reveal.span).
     Reveal { id: rv; open: root.visible }
 
-    // Both loops only run while the page is on screen. The orbit holds still under the cursor and while typing.
     NumberAnimation on spin {
         from: 0; to: 2 * Math.PI
         duration: Theme.durOrbit
@@ -97,8 +88,6 @@ Item {
         running: root.visible && root.connecting
     }
 
-    // One entry per drawn network: { e: network, ring: 0..2, angle: radians }.
-    // Order inside a ring is by name, so dots stay put when signals wobble but the ring does not change.
     readonly property var nodes: {
         const active = Sys.wifiName;
         const rest = Sys.wifiList
@@ -134,7 +123,6 @@ Item {
         font.family: Theme.font; font.pixelSize: Theme.fontSm
     }
 
-    // ---- guide rings: they grow out from the middle, inner first
     Repeater {
         model: root.orbitRadii
         delegate: Rectangle {
@@ -154,7 +142,6 @@ Item {
         }
     }
 
-    // ---- spokes: a thin line from the core to each dot
     Repeater {
         model: root.nodes
         delegate: Item {
@@ -179,7 +166,6 @@ Item {
         }
     }
 
-    // ---- the other networks
     Repeater {
         model: root.nodes
         delegate: Item {
@@ -236,7 +222,6 @@ Item {
         }
     }
 
-    // ---- while joining a network, a ring spreads out from the core
     Rectangle {
         readonly property real d: root.orbitCenterSize + root.ping * (2 * root.orbitRadii[0] - root.orbitCenterSize)
         visible: root.connecting
@@ -250,7 +235,6 @@ Item {
         opacity: (1 - root.ping) * 0.5
     }
 
-    // ---- the core: the network you are on
     Rectangle {
         width: root.orbitCenterSize; height: root.orbitCenterSize
         radius: width / 2
@@ -269,7 +253,6 @@ Item {
         }
     }
 
-    // ---- password: dims the whole page and asks in a small card. A click outside the card cancels.
     Rectangle {
         anchors.fill: parent
         radius: Theme.radiusCard
@@ -418,7 +401,6 @@ Item {
         }
     }
 
-    // ---- footer
     Item {
         anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
         height: Theme.listFooterHeight

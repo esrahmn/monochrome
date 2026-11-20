@@ -2,9 +2,6 @@ import "../../core"
 import QtQuick
 import Quickshell
 
-// The workspace overview, as a body of the island: it hangs from the bar like every other panel,
-// so the bar and the overview are one shape. No window of its own.
-// Arrows / H J K L move between workspaces, Tab cycles windows, Enter opens, 1-9 jump, Esc closes.
 Item {
     id: root
 

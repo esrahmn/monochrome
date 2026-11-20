@@ -2,7 +2,6 @@ import QtQuick
 import "../../../core"
 import "../../../shared/components"
 
-// Control Center tile: neutral glass, active = dark gray fill (no bright accent).
 Rectangle {
     id: root
 
@@ -17,7 +16,6 @@ Rectangle {
     Behavior on color { TweenColor { duration: Theme.durFast } }
     Behavior on scale { Tween { duration: Theme.durFast } }
 
-    // HoverHandler is passive, so the hover state survives child mouse areas (e.g. the Wi-Fi icon button).
     HoverHandler { id: hover }
 
     MouseArea {

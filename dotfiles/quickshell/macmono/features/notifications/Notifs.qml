@@ -4,9 +4,6 @@ import Quickshell
 import Quickshell.Services.Notifications
 import "../../core"
 
-// Receives notifications. It has no window: the island draws them (NotifToasts).
-// This owns the server AND how long each toast lives, so a notification can never get stuck
-// on screen even if nothing is drawing it.
 Scope {
     id: root
 
@@ -26,7 +23,6 @@ Scope {
         }
     }
 
-    // One timer per tracked notification. Paused while the island is hovered.
     Instantiator {
         model: server.trackedNotifications
         delegate: Timer {
@@ -37,14 +33,12 @@ Scope {
         }
     }
 
-    // The island shows a toast whenever this is above zero. Driven by the model's own signals.
     Connections {
         target: server.trackedNotifications
         function onObjectInsertedPost(object, index) { root.syncCount(); }
         function onObjectRemovedPost(object, index) { root.syncCount(); }
     }
 
-    // Plain array of the live notifications, for NotifToasts to draw.
     function syncCount() {
         const v = server.trackedNotifications.values;
         const items = [];

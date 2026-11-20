@@ -4,7 +4,7 @@ import "../../../shared/components"
 
 Item {
     id: root
-    readonly property int screenCornerRadius: 4   // concentric with the bezel
+    readonly property int screenCornerRadius: 4
 
     readonly property int settingsMonitorHeight: 110
     readonly property int settingsMonitorMaxW: 200

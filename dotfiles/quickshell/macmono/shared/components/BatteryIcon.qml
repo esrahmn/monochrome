@@ -1,9 +1,6 @@
 import QtQuick
 import "../../core"
 
-// Battery icon. With showPercent the number sits inside it (the icon grows a little to fit).
-// The number is drawn twice so it reads on both halves: light on the empty part, dark on the filled
-// part (the dark copy is clipped to the fill).
 Item {
     id: root
 
@@ -24,7 +21,6 @@ Item {
         color: Theme.transparent
         border.width: Theme.borderThin; border.color: Theme.dim
 
-        // Light copy of the number: shows on the empty part. The fill is drawn after it and covers it.
         Text {
             id: lightLabel
             visible: root.showPercent
@@ -43,7 +39,6 @@ Item {
             color: Sys.batCharging ? Theme.accent : Theme.text
             clip: root.showPercent
 
-            // Dark copy of the number, lined up exactly over the light one.
             Text {
                 visible: root.showPercent
                 x: lightLabel.x - fill.x

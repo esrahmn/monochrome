@@ -3,8 +3,6 @@ import QtQuick.Effects
 import "../../core"
 import "../../shared/components"
 
-// Notification toasts, drawn inside the island. No window and no frame of their own:
-// the island is the surface and each notification is a tile on it.
 Item {
     id: root
 
@@ -26,8 +24,6 @@ Item {
 
     readonly property int count: Sys.toastCount
     readonly property real wantHeight: count > 0 ? col.implicitHeight + toastInset * 2 : 0
-    // Keeps the last height while the final toast leaves, so the island closes with its own spring
-    // instead of snapping shut the moment the list is empty.
     property real keptHeight: 0
     onWantHeightChanged: if (wantHeight > 0) keptHeight = wantHeight
     Component.onCompleted: keptHeight = wantHeight
@@ -51,12 +47,10 @@ Item {
                 width: col.width
 
                 implicitHeight: Math.min(root.notifMaxHeight, row.implicitHeight + root.notifPadTop + root.notifPadBottom)
-                // Concentric with the island's corner: the card sits toastInset px inside it.
                 radius: Theme.radiusInside(root.toastInset)
                 color: Theme.tile
                 clip: true
 
-                // Arrives with a short fade and slide. How long it stays is decided by Notifs.
                 property real appear: 0
                 NumberAnimation on appear { from: 0; to: 1; duration: Theme.durBase; easing.type: Theme.easeOut }
                 opacity: appear
