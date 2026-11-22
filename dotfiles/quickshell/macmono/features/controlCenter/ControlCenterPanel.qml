@@ -23,6 +23,11 @@ Item {
     readonly property bool typing: wifiOrbit.typing
     readonly property bool holdOpen: typing || Sys.wifiConnecting !== ""
 
+    // Sections come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: root.shown; count: 6; step: 65 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     function toggleExpand(name) {
         expanded = expanded === name ? "" : name;
         if (expanded === "wifi")
@@ -90,6 +95,8 @@ Item {
                     visible: root.expanded !== "wifi"
                     Layout.fillWidth: true
                     spacing: Theme.space12
+                    opacity: root.intro(0)
+                    transform: Translate { y: root.rise(0) }
 
                     Rectangle {
                         implicitWidth: root.ccAvatarSize
@@ -185,6 +192,8 @@ Item {
                     spacing: Theme.space8
 
                     CcNetworkTiles {
+                        opacity: root.intro(1)
+                        transform: Translate { y: root.rise(1) }
                         expanded: root.expanded
                         onRequestExpand: (key) => {
                             return root.toggleExpand(key);
@@ -192,6 +201,8 @@ Item {
                     }
 
                     CcQuickToggles {
+                        opacity: root.intro(2)
+                        transform: Translate { y: root.rise(2) }
                     }
 
                 }
@@ -241,6 +252,8 @@ Item {
                 }
 
                 CcSliders {
+                    opacity: root.intro(3)
+                    transform: Translate { y: root.rise(3) }
                     visible: root.expanded !== "wifi"
                     expanded: root.expanded
                     onRequestExpand: (key) => {
@@ -249,6 +262,8 @@ Item {
                 }
 
                 CcMedia {
+                    opacity: root.intro(4)
+                    transform: Translate { y: root.rise(4) }
                     visible: root.expanded !== "wifi" && root.player !== null
                     player: root.player
                     players: Sys.mediaPlayers
@@ -259,6 +274,8 @@ Item {
                 }
 
                 NotificationHistory {
+                    opacity: root.intro(5)
+                    transform: Translate { y: root.rise(5) }
                     visible: root.expanded !== "wifi" && Sys.notifHistory.length > 0
                     Layout.fillWidth: true
                 }

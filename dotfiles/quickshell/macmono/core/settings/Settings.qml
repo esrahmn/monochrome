@@ -26,14 +26,6 @@ Singleton {
 
     readonly property int launcherMaxResults: SettingsStore.v("launcherMaxResults", 9)
 
-    readonly property int overviewRows: SettingsStore.v("overviewRows", 2)
-
-    readonly property int overviewColumns: SettingsStore.v("overviewColumns", 5)
-
-    readonly property real overviewScale: SettingsStore.v("overviewScale", 0.14)
-
-    readonly property bool overviewLivePreview: SettingsStore.v("overviewLivePreview", true)
-
     readonly property int clipboardMaxItems: SettingsStore.v("clipboardMaxItems", 200)
 
     readonly property int notifDefaultTimeoutMs: SettingsStore.v("notifDefaultTimeoutMs", 3000)
@@ -129,8 +121,6 @@ Singleton {
     readonly property int wallpaperPreviewDebounceMs: SettingsStore.v("wallpaperPreviewDebounceMs", 90)
 
     readonly property int wallpaperReadyTimeoutMs: SettingsStore.v("wallpaperReadyTimeoutMs", 8000)
-
-    readonly property int overviewPreviewRetryMs: SettingsStore.v("overviewPreviewRetryMs", 700)
 
     readonly property int launcherSectionHeaderHeight: 28
 

@@ -9,7 +9,6 @@ import "../emojiPicker"
 import "../launcher"
 import "../media"
 import "../notifications"
-import "../overview"
 import "../power"
 import "../settings"
 import "../tray"
@@ -36,12 +35,15 @@ Item {
     readonly property real widthProgress: widthReveal.progress
     readonly property real widthTravel: widthReveal.travel
     readonly property bool toastMode: displayedPanel === "notifications"
+    // Panels that fade their own contents in and out (Cascade) skip the block fade below.
+    readonly property bool selfReveal: displayedPanel === "media" || displayedPanel === "controlCenter"
+    // Those panels also get a moment to play their contents out before the body closes around them.
+    readonly property int closeHoldMs: 170
 
     readonly property bool shown: panelName !== "" && (panelName === "notifications"
         || (Sys.activePanel === panelName && Sys.activePanelScreen === screenName))
     readonly property var activeItem: displayedPanel === "launcher" ? launcherLoader.item
-        : displayedPanel === "emoji" ? emojiLoader.item
-        : displayedPanel === "overview" ? overviewLoader.item : panelLoader.item
+        : displayedPanel === "emoji" ? emojiLoader.item : panelLoader.item
     readonly property real contentHeight: activeItem?.implicitHeight ?? 0
     readonly property real desiredWidth: activeItem?.implicitWidth ?? 0
     readonly property real targetHeight: Math.min(contentHeight, Math.max(1, maxPanelHeight))
@@ -71,7 +73,6 @@ Item {
         case "tray": return trayComponent;
         case "notifications": return notificationsComponent;
         case "wallpaper": return wallpaperComponent;
-        case "overview": return overviewComponent;
         default: return null;
         }
     }
@@ -89,17 +90,20 @@ Item {
         case "power": Sys.powerOpen = false; break;
         case "tray": Sys.trayMenuOpen = false; break;
         case "wallpaper": Sys.wallpaperOpen = false; break;
-        case "overview": Sys.overviewOpen = false; break;
         }
     }
 
     function syncPanel() {
         const requested = shown ? panelName : "";
+        closeHold.stop();
         if (requested === "") {
             swapAnim.stop();
             swapFade = 1;
             pendingPanel = "";
-            revealOpen = false;
+            if (selfReveal && revealOpen)
+                closeHold.start();
+            else
+                revealOpen = false;
         } else if (requested === displayedPanel) {
             swapAnim.stop();
             swapFade = 1;
@@ -130,7 +134,6 @@ Item {
     Component { id: trayComponent; TrayPanel { panelScreen: root.screenName } }
     Component { id: notificationsComponent; NotifToasts { panelScreen: root.screenName } }
     Component { id: wallpaperComponent; WallpaperPanel { panelScreen: root.screenName } }
-    Component { id: overviewComponent; OverviewPanel { panelScreen: root.screenName } }
 
     function finishClose() {
         if (revealOpen || reveal.animating || widthReveal.animating)
@@ -185,6 +188,12 @@ Item {
         NumberAnimation { target: root; property: "swapFade"; to: 1; duration: Theme.durBase; easing.type: Theme.easeOut }
     }
 
+    Timer {
+        id: closeHold
+        interval: root.closeHoldMs
+        onTriggered: if (!root.shown) root.revealOpen = false
+    }
+
     onShownChanged: syncPanel()
     onPanelNameChanged: syncPanel()
     Component.onCompleted: syncPanel()
@@ -198,7 +207,7 @@ Item {
         x: (root.width - width) * root.align
         width: root.targetWidth > 0 ? root.targetWidth : root.width
         height: root.settledHeight
-        readonly property real fade: reveal.span(0.2, 0.85) * root.swapFade
+        readonly property real fade: (root.selfReveal ? 1 : reveal.span(0.2, 0.85)) * root.swapFade
         opacity: fade
         enabled: root.revealOpen
         clip: true
@@ -219,10 +228,10 @@ Item {
         Loader {
             id: panelLoader
             anchors.fill: parent
-            visible: root.displayedPanel !== "launcher" && root.displayedPanel !== "emoji" && root.displayedPanel !== "overview"
+            visible: root.displayedPanel !== "launcher" && root.displayedPanel !== "emoji"
             sourceComponent: visible ? root.panelComponent(root.displayedPanel) : null
             onLoaded: {
-                if ((root.displayedPanel === "power" || root.displayedPanel === "media" || root.displayedPanel === "overview") && item)
+                if ((root.displayedPanel === "power" || root.displayedPanel === "media") && item)
                     item.forceActiveFocus();
             }
         }
@@ -241,13 +250,5 @@ Item {
             sourceComponent: visible || item !== null ? emojiComponent : null
         }
 
-        Loader {
-            id: overviewLoader
-            anchors.fill: parent
-            visible: root.displayedPanel === "overview"
-            sourceComponent: visible || item !== null ? overviewComponent : null
-            onVisibleChanged: if (visible && item) item.forceActiveFocus()
-            onLoaded: if (item) item.forceActiveFocus()
-        }
     }
 }

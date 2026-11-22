@@ -19,6 +19,78 @@ ColumnLayout {
     property bool roomy: false
     signal playerChangeRequested(int index)
 
+    // A Cascade from the panel. When set, the sections come in one after another and go out in
+    // reverse order. Left null (MediaCard), everything is simply there.
+    property var cascade: null
+    function intro(order) { return cascade ? cascade.fade(order) : 1; }
+    function rise(order) { return cascade ? Theme.staggerRise * (1 - cascade.fade(order)) : 0; }
+    function pop(order) { return cascade ? 0.88 + 0.12 * cascade.back(order) : 1; }
+
+    // What is on screen. It follows the player, except on a track change: the old title, artist and
+    // cover fade out, the text is swapped at the bottom of the fade, and the new ones come in.
+    property string shownTitle: ""
+    property string shownArtist: ""
+    property string shownIdentity: ""
+    property string shownArt: ""
+    property real swapOpacity: 1
+    property real swapRise: 0
+    property bool outgoing: false
+    property string lastKey: ""
+    readonly property string trackKey: player ? (player.trackTitle ?? "") + "\u001f" + (player.trackArtist ?? "") : ""
+    readonly property string artUrl: player?.trackArtUrl ?? ""
+
+    function syncShown() {
+        shownTitle = player?.trackTitle ?? "";
+        shownArtist = player?.trackArtist ?? "";
+        shownIdentity = player?.identity ?? "";
+        shownArt = artUrl;
+    }
+
+    onTrackKeyChanged: {
+        const first = lastKey === "";
+        lastKey = trackKey;
+        if (first || !visible || trackKey === "") {
+            swapAnim.stop();
+            outgoing = false;
+            swapOpacity = 1;
+            swapRise = 0;
+            syncShown();
+        } else {
+            swapAnim.restart();
+        }
+    }
+    // Spotify sends the cover a moment after the title. Wait a little so it joins the swap if it can.
+    onArtUrlChanged: artTimer.restart()
+    Timer {
+        id: artTimer
+        interval: 90
+        onTriggered: if (!root.outgoing) root.shownArt = root.artUrl
+    }
+    Component.onCompleted: {
+        lastKey = trackKey;
+        syncShown();
+    }
+
+    SequentialAnimation {
+        id: swapAnim
+        ScriptAction { script: root.outgoing = true }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "swapOpacity"; to: 0; duration: 170; easing.type: Easing.OutQuad }
+            NumberAnimation { target: root; property: "swapRise"; to: -6; duration: 170; easing.type: Easing.OutQuad }
+        }
+        ScriptAction {
+            script: {
+                root.syncShown();
+                root.outgoing = false;
+                root.swapRise = 8;
+            }
+        }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "swapOpacity"; to: 1; duration: 400; easing.type: Easing.OutQuad }
+            NumberAnimation { target: root; property: "swapRise"; to: 0; duration: 400; easing.type: Easing.OutQuad }
+        }
+    }
+
     readonly property int artRadius: roomy ? Theme.radiusCard : Theme.radiusCard
     readonly property int artGlyph: roomy ? 24 : 22
     readonly property int switchSize: roomy ? 28 : 26
@@ -67,6 +139,8 @@ ColumnLayout {
             radius: root.artRadius
             color: Theme.tile
             clip: true
+            opacity: root.intro(0) * root.swapOpacity
+            scale: root.pop(0) * (0.94 + 0.06 * root.swapOpacity)
             Glyph {
                 visible: art.status !== Image.Ready
                 anchors.centerIn: parent
@@ -77,7 +151,7 @@ ColumnLayout {
             Image {
                 id: art
                 anchors.fill: parent
-                source: root.player?.trackArtUrl ?? ""
+                source: root.shownArt
                 fillMode: Image.PreserveAspectCrop
                 asynchronous: true
                 sourceSize.width: 144
@@ -86,7 +160,9 @@ ColumnLayout {
             }
             Rectangle { id: artMask; anchors.fill: parent; radius: root.artRadius; visible: false; layer.enabled: true }
             MultiEffect {
-                visible: art.status === Image.Ready
+                opacity: art.status === Image.Ready ? 1 : 0
+                visible: opacity > 0.001
+                Behavior on opacity { Tween { duration: 260 } }
                 anchors.fill: parent
                 source: art
                 saturation: -1.0
@@ -100,13 +176,15 @@ ColumnLayout {
         ColumnLayout {
             Layout.fillWidth: true
             spacing: Theme.space2
+            opacity: root.intro(1) * root.swapOpacity
+            transform: Translate { y: root.rise(1) + root.swapRise }
             Text {
                 Layout.fillWidth: true
                 elide: Text.ElideRight
                 wrapMode: Text.Wrap
                 maximumLineCount: 2
                 lineHeight: 0.95
-                text: root.player?.trackTitle || "Unknown title"
+                text: root.shownTitle || "Unknown title"
                 color: Theme.text
                 font.family: Theme.font; font.weight: Theme.weightSemibold
                 font.pixelSize: root.roomy ? root.mediaPosterTitleSize : root.mediaPosterTitleSizeCompact
@@ -116,7 +194,7 @@ ColumnLayout {
                 Layout.fillWidth: true
                 Layout.topMargin: Theme.space8
                 elide: Text.ElideRight
-                text: ((root.player?.trackArtist || "") + ((root.player?.trackArtist && root.player?.identity) ? "  ·  " : "") + (root.player?.identity || "")).toUpperCase()
+                text: (root.shownArtist + ((root.shownArtist && root.shownIdentity) ? "  ·  " : "") + root.shownIdentity).toUpperCase()
                 color: Theme.dim
                 font.family: Theme.font; font.pixelSize: Theme.fontXs; font.weight: Theme.weightSemibold
                 font.letterSpacing: Theme.trackCaps
@@ -130,6 +208,7 @@ ColumnLayout {
             Layout.preferredHeight: root.switchSize
             Layout.alignment: Qt.AlignTop
             hoverEnabled: true
+            opacity: root.intro(1)
             onClicked: root.playerChangeRequested((root.players.indexOf(root.player) + 1) % root.players.length)
             Rectangle { anchors.fill: parent; radius: Theme.radiusControl; color: switchArea.containsMouse ? Theme.tileHover : Theme.transparent }
             Glyph { anchors.centerIn: parent; width: Theme.iconSm; height: Theme.iconSm; name: "chevron"; rotation: -90; color: Theme.dim }
@@ -140,6 +219,8 @@ ColumnLayout {
         Layout.fillWidth: true
         visible: root.len > 0
         spacing: Theme.space4
+        opacity: root.intro(2)
+        transform: Translate { y: root.rise(2) }
         Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.mediaProgressRow
@@ -175,6 +256,8 @@ ColumnLayout {
     RowLayout {
         Layout.fillWidth: true
         spacing: 0
+        opacity: root.intro(3)
+        transform: Translate { y: root.rise(3) }
         Item { Layout.fillWidth: true }
         Repeater {
             model: ["prev", "toggle", "next"]

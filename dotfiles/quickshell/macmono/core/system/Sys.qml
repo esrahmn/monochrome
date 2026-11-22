@@ -78,7 +78,6 @@ Singleton {
         function onConfigReloaded() {
             displaySvc.refresh();
             hyprSyncSvc.reapplyPreview();
-            if (root.overviewOpen) root.refreshHypr();
         }
     }
     EqualizerService { id: eqSvc }
@@ -98,13 +97,11 @@ Singleton {
     property string activePanel: ""
     property string activePanelScreen: ""
     property bool syncingPanelState: false
-    property var overviewShots: ({})
 
     function claimPanel(name, screenName) {
         if (syncingPanelState) return;
         syncingPanelState = true;
         if (name !== "controlCenter") ccOpen = false;
-        if (name !== "overview") overviewOpen = false;
         if (name !== "wallpaper") wallpaperOpen = false;
         if (name !== "launcher") launcherMenuOpen = false;
         if (name !== "clipboard") clipboardOpen = false;
@@ -142,12 +139,6 @@ Singleton {
     onLauncherMenuOpenChanged: {
         if (launcherMenuOpen) claimPanel("launcher", launcherMenuScreen);
         else releasePanel("launcher");
-    }
-    property bool overviewOpen: false
-    property string overviewScreen: ""
-    onOverviewOpenChanged: {
-        if (overviewOpen) claimPanel("overview", overviewScreen);
-        else releasePanel("overview");
     }
     property bool wallpaperOpen: false
     property string wallpaperScreen: ""
@@ -444,14 +435,6 @@ Singleton {
         launcherMenuOpen = true;
     }
 
-    function toggleOverview(screenName) {
-        if (overviewOpen) { overviewOpen = false; return; }
-        closeCCQuiet();
-        refreshHypr();
-        overviewScreen = screenName || focusedScreenName();
-        overviewOpen = true;
-    }
-
     function toggleWallpaper() {
         if (wallpaperOpen) { wallpaperOpen = false; return; }
         closeCCQuiet();
@@ -497,9 +480,6 @@ Singleton {
         emojiOpen = true;
     }
 
-    HyprlandOverviewService { id: hyprOverview; active: root.overviewOpen }
-    readonly property var hyprClients: hyprOverview.clients
-
     readonly property var camApps: ["chrome", "chromium", "brave", "vivaldi", "opera", "edge", "firefox",
         "zen", "zoom", "teams", "skype", "discord", "vesktop", "webcord", "slack", "telegram", "signal",
         "obs", "obsproject", "cheese", "guvcview", "kamoso"]
@@ -521,8 +501,6 @@ Singleton {
             return false;
         }
     }
-    readonly property var hyprMonitors: hyprOverview.monitors
-    function refreshHypr() { hyprOverview.refresh(); }
     SystemClock { id: clock; precision: Settings.clockSeconds ? SystemClock.Seconds : SystemClock.Minutes }
     readonly property var now: clock.date
     readonly property string clockLabel: {
@@ -802,7 +780,6 @@ Singleton {
     function closeCCQuiet() {
         syncingPanelState = true;
         ccOpen = false;
-        overviewOpen = false;
         wallpaperOpen = false;
         launcherMenuOpen = false;
         clipboardOpen = false;

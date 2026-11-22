@@ -33,8 +33,6 @@ Scope {
     property bool osdShown: false
     property bool osdReady: false
 
-    Component.onCompleted: Sys.refreshHypr()
-
     Timer { interval: Settings.osdStartupGraceMs; running: true; onTriggered: root.osdReady = true }
     Timer { id: osdHideTimer; interval: Settings.osdHideMs; onTriggered: root.osdShown = false }
 
@@ -86,7 +84,8 @@ Scope {
             property bool hoverBody: false
             onHoverBodyChanged: Sys.toastHover = hoverBody
             readonly property bool childPanelOpen:
-                Sys.activePanel !== "" && Sys.activePanelScreen === bar.screen.name
+                Sys.activePanel !== ""
+                    && Sys.activePanelScreen === bar.screen.name
             readonly property bool osdActive: root.osdShown && root.osdScreen === bar.screen.name
             property real osdMix: osdActive ? 1 : 0
             Behavior on osdMix { Tween { duration: Theme.durBase } }

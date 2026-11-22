@@ -46,6 +46,8 @@ Rectangle {
         }
     }
 
+    TrackSwap { id: swap; player: root.player; active: root.visible }
+
     onPanelShownChanged: {
         if (panelShown && player)
             pos = clock.sample();
@@ -67,6 +69,8 @@ Rectangle {
                 Layout.alignment: Qt.AlignVCenter
                 enabled: root.players.length > 1
                 cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                opacity: swap.fade
+                scale: 0.94 + 0.06 * swap.fade
                 onClicked: root.playerChangeRequested((root.players.indexOf(root.player) + 1) % root.players.length)
 
                 Rectangle {
@@ -84,7 +88,7 @@ Rectangle {
                     Image {
                         id: art
                         anchors.fill: parent
-                        source: root.player?.trackArtUrl ?? ""
+                        source: swap.shownArt
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                         sourceSize.width: 144
@@ -93,7 +97,9 @@ Rectangle {
                     }
                     Rectangle { id: artMask; anchors.fill: parent; radius: Theme.radiusCard; visible: false; layer.enabled: true }
                     MultiEffect {
-                        visible: art.status === Image.Ready
+                        opacity: art.status === Image.Ready ? 1 : 0
+                        visible: opacity > 0.001
+                        Behavior on opacity { Tween { duration: 260 } }
                         anchors.fill: parent
                         source: art
                         saturation: -1.0
@@ -110,10 +116,12 @@ Rectangle {
                 Layout.minimumWidth: 0
                 Layout.alignment: Qt.AlignVCenter
                 spacing: Theme.space2
+                opacity: swap.fade
+                transform: Translate { y: swap.rise }
                 Text {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
-                    text: root.player?.trackTitle || "Unknown title"
+                    text: swap.shownTitle || "Unknown title"
                     color: Theme.text
                     font.family: Theme.font; font.pixelSize: Theme.fontLg; font.weight: Theme.weightSemibold
                     font.letterSpacing: Theme.trackSnug
@@ -121,7 +129,7 @@ Rectangle {
                 Text {
                     Layout.fillWidth: true
                     elide: Text.ElideRight
-                    text: (root.player?.trackArtist || root.player?.identity || "").toUpperCase()
+                    text: (swap.shownArtist || swap.shownIdentity).toUpperCase()
                     color: Theme.dim
                     font.family: Theme.font; font.pixelSize: Theme.fontXs; font.weight: Theme.weightSemibold
                     font.letterSpacing: Theme.trackCaps

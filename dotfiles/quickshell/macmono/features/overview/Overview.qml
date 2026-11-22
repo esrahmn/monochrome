@@ -10,6 +10,7 @@ Rectangle {
 
     required property var screenInfo
     property bool live: false
+    property string query: ""
     signal activated(string cmd)
 
     readonly property HyprlandMonitor hmon: Hyprland.monitorFor(screenInfo)
@@ -18,8 +19,15 @@ Rectangle {
     readonly property int rows: Settings.overviewRows
     readonly property int cols: Settings.overviewColumns
     readonly property int perGroup: rows * cols
-    readonly property real s: Settings.overviewScale
-    readonly property int gap: 8
+    readonly property real baseWsW: monW - res[0] - res[2]
+    readonly property real baseWsH: monH - res[1] - res[3]
+    readonly property real availableW: Math.max(1, screenInfo.width - Theme.space32 * 2)
+    readonly property real availableH: Math.max(1, screenInfo.height - 276)
+    readonly property real fitScale: Math.min(
+        availableW / Math.max(1, baseWsW * cols + gap * (cols - 1)),
+        availableH / Math.max(1, baseWsH * rows + gap * (rows - 1)))
+    readonly property real s: Math.min(fitScale, fitScale * Math.max(0.55, Settings.overviewScale / 0.14))
+    readonly property int gap: 18
 
     readonly property var res: mon?.reserved ?? [0, 0, 0, 0]
     readonly property real monW: mon ? ((mon.transform % 2 === 1) ? mon.height : mon.width) / mon.scale : screenInfo.width
@@ -65,6 +73,10 @@ Rectangle {
         if (cursorWin !== "") ov.activated("hl.dsp.focus({ window = \"address:" + cursorWin + "\" })");
         else ov.activated("hl.dsp.focus({ workspace = " + cur + " })");
     }
+    function activateFirstMatch() {
+        if (clients.length > 0)
+            ov.activated("hl.dsp.focus({ window = \"address:" + clients[0].address + "\" })");
+    }
     function closeCursorWindow() {
         if (cursorWin === "") return;
         dispatch("hl.dsp.window.close({ window = \"address:" + cursorWin + "\" })");
@@ -88,8 +100,16 @@ Rectangle {
         return false;
     }
 
-    readonly property var clients: Sys.hyprClients.filter(c =>
-        c.mapped && c.workspace && c.workspace.id >= firstWs && c.workspace.id < firstWs + perGroup)
+    readonly property var clients: {
+        const q = ov.query.trim().toLowerCase();
+        return Sys.hyprClients.filter(c => {
+            if (!c.mapped || !c.workspace || c.workspace.id < firstWs || c.workspace.id >= firstWs + perGroup)
+                return false;
+            if (q === "") return true;
+            return [c.title, c.class, c.initialTitle, c.initialClass]
+                .some(value => String(value ?? "").toLowerCase().includes(q));
+        });
+    }
     readonly property var byAddr: {
         const m = ({});
         for (const c of clients) m[c.address] = c;
@@ -317,6 +337,31 @@ Rectangle {
                             ov.activated("hl.dsp.focus({ window = \"address:" + w.modelData + "\" })");
                         }
                     }
+                }
+            }
+        }
+
+        Repeater {
+            model: ov.perGroup
+            delegate: Rectangle {
+                required property int index
+                readonly property int ws: ov.firstWs + index
+                readonly property var p: ov.cellPos(ws)
+                x: p.x + Theme.space8
+                y: p.y + Theme.space8
+                z: 40
+                width: 92
+                height: 26
+                radius: Theme.radiusControl
+                color: Qt.rgba(0, 0, 0, 0.58)
+                border.width: 1
+                border.color: Theme.line
+                Text {
+                    anchors.centerIn: parent
+                    text: "Desktop " + parent.ws
+                    color: Theme.text
+                    font.family: Theme.font
+                    font.pixelSize: Theme.fontXs
                 }
             }
         }

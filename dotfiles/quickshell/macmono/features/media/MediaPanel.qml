@@ -8,6 +8,10 @@ Item {
     id: root
 
     property string panelScreen: ""
+    // Contents come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: root.shown; count: 5 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
     readonly property bool shown: Sys.activePanel === "media" && Sys.activePanelScreen === panelScreen
     readonly property int mediaPopupLyricsHeight: 210
     property int playerIndex: -1
@@ -49,6 +53,7 @@ Item {
         CavaWave {
             height: Math.min(card.height * 0.4, 150)
             visible: root.p !== null && Settings.visualizerEnabled && Settings.visualizerInPopup
+            opacity: root.intro(0)
             levels: Sys.mediaVisualizerLevels
             cornerRadius: Theme.radiusPanel - Theme.borderThin
 
@@ -66,6 +71,8 @@ Item {
 
             visible: !root.p
             anchors.centerIn: parent
+            opacity: root.intro(0)
+            transform: Translate { y: root.rise(0) }
             text: "Nothing is playing"
             color: Theme.dim
             font.family: Theme.font
@@ -80,6 +87,7 @@ Item {
             player: root.p
             players: Sys.mediaPlayers
             panelShown: root.shown
+            cascade: stagger
             onPlayerChangeRequested: (index) => {
                 return root.playerIndex = index;
             }
@@ -100,6 +108,8 @@ Item {
             player: root.p
             active: root.shown
             visible: root.p !== null
+            opacity: root.intro(4)
+            transform: Translate { y: root.rise(4) }
 
             anchors {
                 left: parent.left

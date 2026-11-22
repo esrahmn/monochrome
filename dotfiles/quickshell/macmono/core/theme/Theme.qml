@@ -47,7 +47,7 @@ Singleton {
 
     readonly property int iconSm: 14
     readonly property int iconMd: 16
-    readonly property int iconLg: 20
+    readonly property int iconLg: 18
     readonly property int iconXl: 24
 
     readonly property color ink: "#101010"
@@ -130,7 +130,7 @@ Singleton {
     readonly property real wallSlide: 1.0
     readonly property real wallDip: 0.4
 
-    readonly property int barHeight: 36
+    readonly property int barHeight: 32
     readonly property int barMargin: 6
 
     readonly property int islandCompactMinWidth: 112

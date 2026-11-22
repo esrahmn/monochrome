@@ -7,7 +7,6 @@ Scope {
         target: "shell"
 
         function toggleLauncher(): void { Sys.toggleLauncher(); }
-        function toggleOverview(): void { Sys.toggleOverview(); }
         function toggleCC(): void { Sys.toggleCC(); }
         function toggleClipboard(): void { Sys.toggleClipboard(); }
         function toggleWallpaper(): void { Sys.toggleWallpaper(); }
@@ -26,7 +25,6 @@ Scope {
         function toggleNightLight(): void { Sys.toggleNightLight(); }
 
         function isLauncherOpen(): bool { return Sys.launcherMenuOpen; }
-        function isOverviewOpen(): bool { return Sys.overviewOpen; }
         function isCCOpen(): bool { return Sys.ccOpen; }
         function isSettingsOpen(): bool { return Sys.settingsOpen; }
         function focusedScreen(): string { return Sys.focusedScreenName(); }

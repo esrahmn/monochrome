@@ -23,7 +23,6 @@ Scope {
         const pressedAt = superPressedAt;
         superPressedAt = 0;
         if (!superMightTrigger) { superMightTrigger = true; return; }
-        if (Sys.overviewOpen) return;
         if (pressedAt > 0) {
             if (Date.now() - pressedAt > Settings.superTapMaxMs) return;
             if ((Hyprland.focusedWorkspace?.id ?? null) !== wsAtPress) return;
@@ -78,11 +77,6 @@ Scope {
         name: "overviewEmojiToggle"
         description: "macmono: emoji picker"
         onPressed: Sys.toggleEmoji()
-    }
-    GlobalShortcut {
-        name: "overviewWorkspacesToggle"
-        description: "macmono: window overview"
-        onPressed: Sys.toggleOverview()
     }
     GlobalShortcut {
         name: "sessionToggle"
