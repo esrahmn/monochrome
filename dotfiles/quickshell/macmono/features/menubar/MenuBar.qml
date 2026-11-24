@@ -388,7 +388,6 @@ Scope {
                         MouseArea {
                             id: miniMediaArea
                             readonly property var player: bar.mediaPlayer
-                            readonly property bool waveOn: Boolean(player?.isPlaying) && Settings.visualizerEnabled && Settings.visualizerInBar
                             x: Math.round(rightLane.mediaCenterX - width / 2)
                             anchors.verticalCenter: parent.verticalCenter
                             width: rightLane.mediaW
@@ -398,21 +397,53 @@ Scope {
                             cursorShape: Qt.PointingHandCursor
                             onClicked: Sys.toggleMedia(bar.screen.name)
 
-                            CavaWave {
-                                anchors.fill: parent
-                                opacity: miniMediaArea.waveOn ? 1 - bar.osdMix : 0
-                                visible: opacity > 0
-                                levels: Sys.mediaVisualizerLevels
-                                fillOpacity: 0.10
-                                cornerRadius: 0
+                            TrackSwap {
+                                id: barSwap
+                                player: miniMediaArea.player
+                                active: miniMediaArea.visible
                             }
-                            Glyph {
-                                anchors.centerIn: parent
-                                width: Theme.iconSm
-                                height: Theme.iconSm
-                                name: "music"
-                                color: Theme.dim
-                                visible: !miniMediaArea.waveOn
+
+                            Item {
+                                anchors { fill: parent; leftMargin: Theme.space12; rightMargin: Theme.space12 }
+                                opacity: barSwap.fade
+                                transform: Translate { y: barSwap.rise }
+
+                                Row {
+                                    anchors.centerIn: parent
+                                    spacing: Theme.space4
+
+                                    Text {
+                                        id: barTitle
+                                        width: Math.min(implicitWidth, Math.max(0, parent.parent.width
+                                            - barArtist.width - barDot.width - parent.spacing * 2))
+                                        elide: Text.ElideRight
+                                        text: barSwap.shownTitle || "Unknown title"
+                                        color: Theme.text
+                                        font.family: Theme.font
+                                        font.pixelSize: Theme.fontSm
+                                        font.weight: Theme.weightSemibold
+                                    }
+
+                                    Text {
+                                        id: barDot
+                                        visible: barArtist.visible
+                                        text: "·"
+                                        color: Theme.faint
+                                        font.family: Theme.font
+                                        font.pixelSize: Theme.fontXs
+                                    }
+
+                                    Text {
+                                        id: barArtist
+                                        width: Math.min(implicitWidth, parent.parent.width * 0.45)
+                                        elide: Text.ElideRight
+                                        visible: text !== ""
+                                        text: barSwap.shownArtist
+                                        color: Theme.dim
+                                        font.family: Theme.font
+                                        font.pixelSize: Theme.fontXs
+                                    }
+                                }
                             }
                         }
 

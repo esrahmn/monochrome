@@ -15,8 +15,13 @@ Rectangle {
     radius: Theme.radiusCard
     color: hot ? Theme.accent : (area.pressed ? Theme.tilePress : area.containsMouse ? Theme.tileHover : Theme.tile)
     Behavior on color { TweenColor { duration: Theme.durFast } }
-    scale: area.pressed ? Theme.pressScale : 1
-    Behavior on scale { Tween { duration: Theme.durFast } }
+    scale: area.pressed ? Theme.pressScale : area.containsMouse ? Theme.hoverScale : 1
+    Behavior on scale {
+        Tween {
+            duration: area.pressed ? Theme.durPress : Theme.durBase
+            easing.type: area.pressed ? Theme.easeOut : Theme.easeSnappy
+        }
+    }
 
     Column {
         anchors.centerIn: parent
@@ -39,5 +44,5 @@ Rectangle {
             font.features: ({ "tnum": 1 })
         }
     }
-    MouseArea { id: area; anchors.fill: parent; hoverEnabled: true; onClicked: root.clicked() }
+    MouseArea { id: area; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.clicked() }
 }

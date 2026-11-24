@@ -74,6 +74,7 @@ Column {
             id: card
             required property var modelData
             readonly property var v: root.svc.value(modelData)
+            readonly property bool compact: width < 440
             width: root.width
             height: body.height + SettingsMetrics.settingsRowPadY * 2
             radius: Theme.radiusCard
@@ -94,30 +95,37 @@ Column {
 
                     SettingsMonitorPreview {
                         id: monPreview
+                        visible: !card.compact
                         resW: parseInt(String(card.v.res).split("x")[0]) || 0
                         resH: parseInt(String(card.v.res).split("x")[1]) || 0
                         transformV: card.v.transform
                     }
 
                     Column {
-                        width: parent.width - monPreview.width - Theme.space24
+                        width: card.compact ? parent.width : parent.width - monPreview.width - Theme.space24
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: Theme.space4
 
                         SettingsText { text: card.modelData.name; color: Theme.dim; font.pixelSize: Theme.fontSm }
                         SettingsText {
+                            width: parent.width
+                            elide: Text.ElideRight
                             text: String(card.v.res).replace("x", " × ")
                             font.pixelSize: Theme.fontXl
                             font.weight: Theme.weightSemibold
                             font.letterSpacing: Theme.trackSnug
                         }
                         SettingsText {
+                            width: parent.width
+                            elide: Text.ElideRight
                             text: Math.round(Number(card.v.rate)) + " Hz  ·  " + Math.round(card.v.scale * 100) + "% scale"
                                   + (card.v.transform === 0 ? "" : "  ·  rotated")
                             color: SettingsMetrics.settingsDescText
                             font.pixelSize: Theme.fontSm
                         }
                         SettingsText {
+                            width: parent.width
+                            elide: Text.ElideRight
                             visible: Math.abs(card.v.scale - 1) > 0.001 && monPreview.resW > 0
                             text: "Looks like " + Math.round((monPreview.swapped ? monPreview.resH : monPreview.resW) / card.v.scale)
                                   + " × " + Math.round((monPreview.swapped ? monPreview.resW : monPreview.resH) / card.v.scale)

@@ -5,6 +5,7 @@ import "features/lock"
 import "features/menubar"
 import "features/notifications"
 import "features/regionSelector"
+import "features/settings"
 import "features/wallpaper"
 
 ShellRoot {
@@ -14,6 +15,7 @@ ShellRoot {
     WallpaperPreview {}
     MenuBar {}
     Notifs {}
+    SettingsWindow {}
     RegionSelector {}
     Shortcuts {}
     LockScreen {}

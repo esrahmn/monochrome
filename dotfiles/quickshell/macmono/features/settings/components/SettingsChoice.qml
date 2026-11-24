@@ -13,7 +13,14 @@ Rectangle {
     color: on ? Theme.tileHover : (chipArea.containsMouse ? Theme.tile : Theme.tile)
     border.width: Theme.borderThin
     border.color: on ? Theme.line : Theme.line
+    scale: chipArea.pressed ? Theme.pressScale : chipArea.containsMouse ? 1.02 : 1
     Behavior on color { TweenColor { duration: Theme.durFast } }
+    Behavior on scale {
+        Tween {
+            duration: chipArea.pressed ? Theme.durPress : Theme.durBase
+            easing.type: chipArea.pressed ? Theme.easeOut : Theme.easeSnappy
+        }
+    }
     SettingsText {
         id: chipText
         anchors.centerIn: parent

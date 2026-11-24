@@ -263,8 +263,9 @@ Column {
 
         Item {
             id: hero
+            readonly property bool compact: page.width < 520
             width: page.width
-            height: laptop.height
+            height: compact ? laptop.height + Theme.space16 + heroText.height : laptop.height
 
             Item {
                 id: laptop
@@ -389,11 +390,10 @@ Column {
             }
 
             Column {
-                anchors {
-                    left: laptop.right; leftMargin: root.aboutHeroGap
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
+                id: heroText
+                x: hero.compact ? 0 : laptop.width + root.aboutHeroGap
+                y: hero.compact ? laptop.height + Theme.space16 : (hero.height - height) / 2
+                width: hero.compact ? hero.width : Math.max(0, hero.width - laptop.width - root.aboutHeroGap)
                 spacing: Theme.space8
 
                 SettingsText {

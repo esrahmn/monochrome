@@ -24,6 +24,11 @@ Item {
     property bool loadFailed: false
     property string selectedCategory: "all"
 
+    // Title, search, categories, grid and footer come in one after another when the panel opens.
+    Cascade { id: stagger; open: win.shown; count: 5; step: 50 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     readonly property var categoryOptions: {
         const options = [
             { id: "all", label: "All" },
@@ -176,6 +181,9 @@ Item {
                     width: parent.width
                     height: root.emojiTitleHeight
                     spacing: Theme.space8
+                    opacity: root.intro(0)
+                    scale: 0.98 + 0.02 * stagger.back(0)
+                    transform: Translate { y: root.rise(0) }
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -199,6 +207,8 @@ Item {
                     id: search
                     width: parent.width
                     radius: height / 2
+                    opacity: root.intro(1)
+                    transform: Translate { y: root.rise(1) }
                     placeholder: "Search emoji"
                     onEscaped: Sys.emojiOpen = false
                     onKeyPressed: (event) => { if (win.navKey(event)) event.accepted = true; }
@@ -208,6 +218,8 @@ Item {
                     id: categoryBar
                     width: parent.width
                     height: root.emojiCategoryHeight
+                    opacity: root.intro(2)
+                    transform: Translate { y: root.rise(2) }
                     contentWidth: categoryRow.implicitWidth
                     contentHeight: height
                     clip: true
@@ -263,6 +275,8 @@ Item {
 
                 GridView {
                     id: grid
+                    opacity: root.intro(3)
+                    transform: Translate { y: root.rise(3) }
                     width: parent.width
                     height: Math.max(0, parent.height - title.height - search.height
                         - categoryBar.height - footer.height - parent.spacing * 4)
@@ -342,6 +356,8 @@ Item {
                 Item {
                     id: footer
                     width: parent.width
+                    opacity: root.intro(4)
+                    transform: Translate { y: root.rise(4) }
                     visible: root.loading || root.loadFailed || win.filtered.length === 0
                     height: visible ? root.emojiFooterHeight : 0
                     Text {

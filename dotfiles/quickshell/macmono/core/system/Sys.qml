@@ -36,7 +36,7 @@ Singleton {
     MediaVisualizerService {
         id: mediaVisualizer
         enabled: Settings.visualizerEnabled
-        wanted: Settings.visualizerInBar || Settings.visualizerInPopup
+        wanted: Settings.visualizerEnabled
         forceRun: root.visualizerPreview
         paused: root.fullscreenActive
         gain: Settings.visualizerGain
@@ -109,7 +109,6 @@ Singleton {
         if (name !== "tray") trayMenuOpen = false;
         if (name !== "calendar") calendarOpen = false;
         if (name !== "media") mediaOpen = false;
-        if (name !== "settings") settingsOpen = false;
         if (name !== "cheatsheet") cheatOpen = false;
         if (name !== "power") powerOpen = false;
         activePanel = name;
@@ -339,19 +338,18 @@ Singleton {
         mediaScreen = screenName || focusedScreenName();
         mediaOpen = true;
     }
+    // Settings lives in its own toplevel window (features/settings/SettingsWindow.qml),
+    // so this is window visibility, not an island panel.
     property bool settingsOpen: false
     property bool visualizerPreview: false
     property bool soundMeterActive: false
-    property string settingsScreen: ""
     onSettingsOpenChanged: {
-        if (settingsOpen) claimPanel("settings", settingsScreen);
-        else releasePanel("settings");
+        if (settingsOpen && activePanel !== "")
+            closeIslandPanels();
     }
     function toggleSettings() {
         if (settingsOpen) { settingsOpen = false; return; }
         closeCCQuiet();
-        cheatOpen = false;
-        settingsScreen = focusedScreenName();
         settingsOpen = true;
     }
     property bool cheatOpen: false
@@ -777,7 +775,7 @@ Singleton {
         function onStartRequested() { root.startCapture(); }
     }
 
-    function closeCCQuiet() {
+    function closeIslandPanels() {
         syncingPanelState = true;
         ccOpen = false;
         wallpaperOpen = false;
@@ -788,11 +786,14 @@ Singleton {
         trayMenuOpen = false;
         calendarOpen = false;
         mediaOpen = false;
-        settingsOpen = false;
         cheatOpen = false;
         activePanel = "";
         activePanelScreen = "";
         syncingPanelState = false;
+    }
+    function closeCCQuiet() {
+        // Settings is its own window now, so island toggles leave it alone.
+        closeIslandPanels();
     }
     function togglePower() {
         if (powerOpen) { powerOpen = false; return; }

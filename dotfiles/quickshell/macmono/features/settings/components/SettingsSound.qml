@@ -431,18 +431,6 @@ Column {
 
     SettingsRow {
         width: root.width
-        title: "Show in top bar"
-        separator: true
-        opacity: Settings.visualizerEnabled ? 1 : 0.4
-        SettingsToggle {
-            enabled: Settings.visualizerEnabled
-            checked: Settings.visualizerInBar
-            onToggled: (v) => root.setVis("visualizerInBar", v)
-        }
-    }
-
-    SettingsRow {
-        width: root.width
         title: "Show in music popup"
         separator: true
         opacity: Settings.visualizerEnabled ? 1 : 0.4

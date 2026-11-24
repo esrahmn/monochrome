@@ -32,6 +32,12 @@ Item {
     property string hoverPath: ""
     property bool stripAnimated: false
 
+    readonly property bool panelActive: Sys.activePanel === "wallpaper" && Sys.activePanelScreen === panelScreen
+    // Controls, strip and empty state come in one after another when the panel opens.
+    Cascade { id: stagger; open: root.panelActive; count: 3; step: 60 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     readonly property var folders: {
         const seen = {};
         const out = [];
@@ -202,6 +208,9 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.wpControlsHeight
             spacing: Theme.space16
+            opacity: root.intro(0)
+            scale: 0.98 + 0.02 * stagger.back(0)
+            transform: Translate { y: root.rise(0) }
 
             Text {
                 Layout.maximumWidth: Settings.wallpaperPillTextMaxWidth
@@ -259,6 +268,8 @@ Item {
             id: strip
             Layout.fillWidth: true
             Layout.preferredHeight: root.wpStripHeight
+            opacity: root.intro(1)
+            transform: Translate { y: root.rise(1) }
             orientation: ListView.Horizontal
             spacing: 0
             clip: true
@@ -297,9 +308,16 @@ Item {
                     color: Theme.tile
                     border.width: cell.picked ? 2 : 1
                     border.color: cell.picked ? Theme.text : Theme.line
-                    scale: cell.picked ? root.wpPickedScale : 1
+                    scale: cell.picked ? root.wpPickedScale
+                         : cellArea.pressed ? Theme.pressScale
+                         : cellArea.containsMouse ? Theme.hoverScale : 1
                     opacity: (cell.picked || cellArea.containsMouse) ? 1.0 : Theme.opacityDim
-                    Behavior on scale { Tween { duration: Theme.durBase } }
+                    Behavior on scale {
+                        Tween {
+                            duration: cellArea.pressed ? Theme.durPress : Theme.durBase
+                            easing.type: cellArea.pressed ? Theme.easeOut : Theme.easeSnappy
+                        }
+                    }
                     Behavior on opacity { Tween { duration: Theme.durFast } }
 
                     Image {
@@ -351,6 +369,8 @@ Item {
 
     Text {
         visible: root.pics.length === 0
+        opacity: root.intro(2)
+        transform: Translate { y: root.rise(2) }
         anchors.centerIn: parent
         horizontalAlignment: Text.AlignHCenter
         text: "No images yet.\nPut wallpapers in ~/Pictures/Wallpapers"

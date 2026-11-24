@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
 import "../../core"
+import "../../shared/components"
 
 Item {
     id: root
@@ -16,6 +17,11 @@ Item {
     readonly property var currentHandle: stack.length > 0
         ? stack[stack.length - 1]
         : (Sys.trayMenuItem ? Sys.trayMenuItem.menu : null)
+
+    // Menu rows come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: root.panelActive; count: Math.max(1, (opener.children ? opener.children.length : 0) + 1); step: 35 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
 
     implicitWidth: Math.max(190, Math.min(420, menuList.implicitWidth + Theme.space16))
     implicitHeight: menuList.implicitHeight + Theme.space16
@@ -49,6 +55,8 @@ Item {
                 visible: root.stack.length > 0
                 Layout.fillWidth: true
                 implicitHeight: root.trayBackHeight
+                opacity: root.intro(0)
+                transform: Translate { y: root.rise(0) }
                 radius: Theme.radiusControl
                 color: backArea.containsMouse ? Theme.tileHover : Theme.transparent
 
@@ -78,9 +86,12 @@ Item {
                 delegate: Item {
                     id: menuRow
                     required property var modelData
+                    required property int index
 
                     readonly property bool separator: modelData.isSeparator
                     Layout.fillWidth: true
+                    opacity: root.intro(index + 1)
+                    transform: Translate { y: root.rise(index + 1) }
                     implicitHeight: separator ? 9 : 30
                     implicitWidth: separator ? 0 : (label.implicitWidth + 64)
 

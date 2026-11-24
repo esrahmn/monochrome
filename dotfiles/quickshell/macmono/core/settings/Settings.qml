@@ -92,7 +92,6 @@ Singleton {
 
     readonly property bool visualizerEnabled: SettingsStore.v("visualizerEnabled", true)
     readonly property real visualizerGain: SettingsStore.v("visualizerGain", 1.0)
-    readonly property bool visualizerInBar: SettingsStore.v("visualizerInBar", true)
     readonly property bool visualizerInPopup: SettingsStore.v("visualizerInPopup", true)
     readonly property int visualizerBarWidth: SettingsStore.v("visualizerBarWidth", 168)
 

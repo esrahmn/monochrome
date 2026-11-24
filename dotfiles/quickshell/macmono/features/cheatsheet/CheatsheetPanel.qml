@@ -12,6 +12,12 @@ Item {
     readonly property int cheatsheetGroupSpacing: 22
     readonly property int cheatsheetRowHeight: 26
     readonly property var groups: KeyList.groups
+
+    // Rows come in one after another when the sheet opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: win.shown; count: root.groups.length + 2; step: 55 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     implicitWidth: cheatsheetWidth
     implicitHeight: Math.min(680, content.height + cheatsheetPadding * 2)
 
@@ -51,6 +57,9 @@ Item {
                     spacing: root.cheatsheetGroupSpacing
 
                     Text {
+                        opacity: root.intro(0)
+                        scale: 0.98 + 0.02 * stagger.back(0)
+                        transform: Translate { y: root.rise(0) }
                         text: "Keyboard shortcuts"
                         color: Theme.text
                         font.family: Theme.font; font.pixelSize: Theme.font2xl; font.weight: Theme.weightSemibold; font.letterSpacing: Theme.trackTight
@@ -61,8 +70,11 @@ Item {
                         delegate: Column {
                             id: grp
                             required property var modelData
+                            required property int index
                             spacing: Theme.space8
                             width: content.width
+                            opacity: root.intro(index + 1)
+                            transform: Translate { y: root.rise(index + 1) }
 
                             Text {
                                 text: grp.modelData.title.toUpperCase()
@@ -103,6 +115,8 @@ Item {
                     }
 
                     Text {
+                        opacity: root.intro(root.groups.length + 1)
+                        transform: Translate { y: root.rise(root.groups.length + 1) }
                         text: "Press any key to close"
                         color: Theme.faint
                         font.family: Theme.font; font.pixelSize: Theme.fontSm

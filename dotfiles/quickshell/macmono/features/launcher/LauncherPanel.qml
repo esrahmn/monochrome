@@ -36,6 +36,11 @@ Item {
     implicitHeight: launcherMenuSearchHeight + launcherMenuBodyNatural
         + launcherMenuFootHeight + Theme.borderStrong
 
+    // Search, rail, app grid and footer come in one after another when the launcher opens.
+    Cascade { id: stagger; open: win.shown; count: 4; step: 50 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     readonly property var cats: [
         { key: "dev",    label: "Development", match: "Development" },
         { key: "net",    label: "Internet",    match: "Network" },
@@ -631,8 +636,12 @@ Item {
                     id: col
                     width: parent.width
                     Item {
+                        id: searchRow
                         width: col.width
                         height: root.launcherMenuSearchHeight
+                        opacity: root.intro(0)
+                        scale: 0.98 + 0.02 * stagger.back(0)
+                        transform: Translate { y: root.rise(0) }
 
                         Rectangle {
                             anchors { fill: parent; margins: Theme.space12 }
@@ -686,11 +695,14 @@ Item {
                     }
 
                     Item {
+                        id: mainBody
                         width: col.width
                         height: win.bodyHeight
 
                         Flickable {
                             id: rail
+                            opacity: root.intro(1)
+                            transform: Translate { y: root.rise(1) }
                             anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
                             width: root.launcherMenuRailWidth
                             contentWidth: width
@@ -740,6 +752,8 @@ Item {
 
                         Item {
                             id: pane
+                            opacity: root.intro(2)
+                            transform: Translate { y: root.rise(2) }
                             anchors { left: railLine.right; right: parent.right; top: parent.top; bottom: parent.bottom }
                             clip: true
 
@@ -827,7 +841,15 @@ Item {
                                             color: cell.isSel ? Theme.tileFocus : Theme.tile
                                             border.width: cell.isSel ? Theme.borderThin : 0
                                             border.color: Theme.tileFocusLine
+                                            scale: cell.lifted ? 1.08 : cellArea.pressed ? Theme.pressScale
+                                                 : cellArea.containsMouse ? 1.04 : 1
                                             Behavior on color { TweenColor { duration: Theme.durFast } }
+                                            Behavior on scale {
+                                                Tween {
+                                                    duration: cellArea.pressed ? Theme.durPress : Theme.durBase
+                                                    easing.type: cellArea.pressed ? Theme.easeOut : Theme.easeSnappy
+                                                }
+                                            }
 
                                             Image {
                                                 anchors.centerIn: parent
@@ -912,8 +934,11 @@ Item {
                     }
 
                     Item {
+                        id: footRow
                         width: col.width
                         height: root.launcherMenuFootHeight
+                        opacity: root.intro(3)
+                        transform: Translate { y: root.rise(3) }
 
                         Row {
                             anchors { left: parent.left; leftMargin: Theme.space16; verticalCenter: parent.verticalCenter }

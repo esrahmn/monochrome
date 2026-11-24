@@ -51,5 +51,7 @@ Item {
     }
 
     onOpenChanged: play()
+    // Menus (tray) fill their rows after the panel is already open.
+    onCountChanged: if (open) play()
     Component.onCompleted: play()
 }

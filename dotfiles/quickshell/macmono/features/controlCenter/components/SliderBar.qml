@@ -16,6 +16,13 @@ Rectangle {
     radius: height / 2
     color: Theme.tile
     clip: true
+    scale: area.pressed ? 0.995 : area.containsMouse ? 1.006 : 1
+    Behavior on scale {
+        Tween {
+            duration: area.pressed ? Theme.durPress : Theme.durBase
+            easing.type: area.pressed ? Theme.easeOut : Theme.easeSnappy
+        }
+    }
 
     Rectangle {
         id: fill
@@ -37,6 +44,8 @@ Rectangle {
     MouseArea {
         id: area
         anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
         function setFrom(mx) { root.moved(Math.max(0, Math.min(1, mx / width))); }
         onPressed: (e) => setFrom(e.x)
         onPositionChanged: (e) => { if (pressed) setFrom(e.x); }

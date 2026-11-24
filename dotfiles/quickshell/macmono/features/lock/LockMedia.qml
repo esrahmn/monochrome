@@ -102,7 +102,6 @@ Rectangle {
                                         anchors.fill: parent
                                         visible: art.status === Image.Ready
                                         source: art
-                                        saturation: -1.0
                                         maskEnabled: true
                                         maskSource: artMask
                                         maskThresholdMin: 0.5

@@ -90,11 +90,14 @@ Singleton {
     readonly property int durSlow: 300
     readonly property int durPulse: 600
     readonly property int durOrbit: 160000
+    readonly property int durPress: 90
     readonly property real pressScale: 0.97
+    readonly property real hoverScale: 1.012
 
     readonly property int easeOut: Easing.OutCubic
     readonly property int easeIn: Easing.InCubic
     readonly property int easeInOut: Easing.InOutCubic
+    readonly property int easeSnappy: Easing.OutBack
 
     readonly property real revealOpenStiff: 420
     readonly property real revealCloseStiff: 420

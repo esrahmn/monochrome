@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../core"
+import "../../../shared/components"
 
 Rectangle {
     id: btn
@@ -11,6 +12,13 @@ Rectangle {
     radius: Theme.radiusCard
     opacity: enabled ? 1 : 0.4
     color: primary ? Theme.text : (btnArea.containsMouse ? Theme.tileHover : Theme.tile)
+    scale: btnArea.pressed ? Theme.pressScale : btnArea.containsMouse ? Theme.hoverScale : 1
+    Behavior on scale {
+        Tween {
+            duration: btnArea.pressed ? Theme.durPress : Theme.durBase
+            easing.type: btnArea.pressed ? Theme.easeOut : Theme.easeSnappy
+        }
+    }
     SettingsText {
         id: btnText
         anchors.centerIn: parent

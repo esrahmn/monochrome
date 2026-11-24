@@ -11,6 +11,12 @@ Rectangle {
     readonly property bool running: visible && Sys.settingsOpen
     property real t: 0
 
+    // Narrow windows drop the page mock so the copy stays inside the card.
+    readonly property real inner: width - SettingsMetrics.settingsRowPadX * 2
+    readonly property bool showPage: inner >= 520
+    readonly property real labelWidth: Math.max(120, inner - SettingsMetrics.settingsDemoPadW
+        - Theme.space24 - (showPage ? SettingsMetrics.settingsDemoPageW + Theme.space24 : 0))
+
     height: SettingsMetrics.settingsDemoHeight + SettingsMetrics.settingsRowPadY * 2
     radius: Theme.radiusCard
     color: Theme.tile
@@ -51,6 +57,7 @@ Rectangle {
 
         Rectangle {
             id: page
+            visible: root.showPage
             width: SettingsMetrics.settingsDemoPageW
             height: SettingsMetrics.settingsDemoHeight
             radius: Theme.radiusCard
@@ -78,11 +85,12 @@ Rectangle {
         }
 
         Column {
+            width: root.labelWidth
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space4
-            SettingsText { text: root.natural ? "Page follows your fingers" : "Page moves the opposite way"; font.weight: Theme.weightSemibold; font.pixelSize: Theme.fontSm }
-            SettingsText { text: "Swipe up on the touchpad"; color: SettingsMetrics.settingsDescText; font.pixelSize: Theme.fontSm }
-            SettingsText { text: "Speed " + Number(root.factor).toFixed(2) + "×"; color: Theme.dim; font.pixelSize: Theme.fontXs }
+            SettingsText { width: parent.width; elide: Text.ElideRight; text: root.natural ? "Page follows your fingers" : "Page moves the opposite way"; font.weight: Theme.weightSemibold; font.pixelSize: Theme.fontSm }
+            SettingsText { width: parent.width; elide: Text.ElideRight; text: "Swipe up on the touchpad"; color: SettingsMetrics.settingsDescText; font.pixelSize: Theme.fontSm }
+            SettingsText { width: parent.width; elide: Text.ElideRight; text: "Speed " + Number(root.factor).toFixed(2) + "×"; color: Theme.dim; font.pixelSize: Theme.fontXs }
         }
     }
 }

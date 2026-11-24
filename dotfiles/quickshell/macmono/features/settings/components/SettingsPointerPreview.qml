@@ -10,6 +10,12 @@ Rectangle {
     property real t: 0
     readonly property real mult: Math.pow(3, sens)
 
+    // Narrow windows drop the screen mock so the copy stays inside the card.
+    readonly property real inner: width - SettingsMetrics.settingsRowPadX * 2
+    readonly property bool showPage: inner >= 520
+    readonly property real labelWidth: Math.max(120, inner - SettingsMetrics.settingsDemoPadW
+        - Theme.space24 - (showPage ? SettingsMetrics.settingsDemoPageW + Theme.space24 : 0))
+
     height: SettingsMetrics.settingsDemoHeight + SettingsMetrics.settingsRowPadY * 2
     radius: Theme.radiusCard
     color: Theme.tile
@@ -49,6 +55,7 @@ Rectangle {
 
         Rectangle {
             id: scr
+            visible: root.showPage
             width: SettingsMetrics.settingsDemoPageW
             height: SettingsMetrics.settingsDemoHeight
             radius: Theme.radiusCard
@@ -75,10 +82,11 @@ Rectangle {
         }
 
         Column {
+            width: root.labelWidth
             anchors.verticalCenter: parent.verticalCenter
             spacing: Theme.space4
-            SettingsText { text: root.sens === 0 ? "Normal speed" : (root.sens > 0 ? "Faster pointer" : "Slower pointer"); font.weight: Theme.weightSemibold; font.pixelSize: Theme.fontSm }
-            SettingsText { text: "Same hand movement, different distance"; color: SettingsMetrics.settingsDescText; font.pixelSize: Theme.fontSm }
+            SettingsText { width: parent.width; elide: Text.ElideRight; text: root.sens === 0 ? "Normal speed" : (root.sens > 0 ? "Faster pointer" : "Slower pointer"); font.weight: Theme.weightSemibold; font.pixelSize: Theme.fontSm }
+            SettingsText { width: parent.width; elide: Text.ElideRight; text: "Same hand movement, different distance"; color: SettingsMetrics.settingsDescText; font.pixelSize: Theme.fontSm }
         }
     }
 }

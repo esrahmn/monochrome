@@ -1,5 +1,6 @@
 import QtQuick
 import "../../../core"
+import "../../../shared/components"
 
 Item {
     id: root
@@ -49,14 +50,24 @@ Item {
         Row {
             anchors { left: parent.left; leftMargin: Theme.space12; verticalCenter: parent.verticalCenter }
             spacing: Theme.space8
+            Glyph { name: "enso"; color: Theme.text; width: Theme.iconSm; height: Theme.iconSm; anchors.verticalCenter: parent.verticalCenter }
             Rectangle { width: SettingsMetrics.settingsDot; height: width; radius: width / 2; color: Theme.text; anchors.verticalCenter: parent.verticalCenter }
-            SettingsText { text: "Desktop"; font.pixelSize: Theme.fontXs; color: Theme.text; anchors.verticalCenter: parent.verticalCenter }
         }
         SettingsText {
             anchors.centerIn: parent
             text: root.clockLabel
             font.pixelSize: Theme.fontXs
             font.weight: Theme.weightSemibold
+        }
+        Rectangle {
+            anchors { right: parent.right; rightMargin: Theme.space12; verticalCenter: parent.verticalCenter }
+            width: 18
+            height: 9
+            radius: 2.5
+            color: Theme.transparent
+            border.width: Theme.borderThin
+            border.color: Theme.text
+            Rectangle { x: 2; y: 2; width: (parent.width - 4) * 0.7; height: parent.height - 4; radius: 1; color: Theme.text }
         }
     }
 
@@ -69,12 +80,30 @@ Item {
         border.width: Theme.borderThin
         border.color: Theme.line
 
-        Column {
+        Row {
             anchors { fill: parent; margins: Theme.space12 }
-            spacing: Theme.space8
-            SettingsText { text: "Panel"; font.pixelSize: Theme.fontSm; font.weight: Theme.weightSemibold }
-            Rectangle { width: parent.width; height: Theme.space8; radius: height / 2; color: Theme.tileHover }
-            Rectangle { width: parent.width * 0.6; height: Theme.space8; radius: height / 2; color: Theme.tile }
+            spacing: Theme.space12
+
+            Rectangle {
+                width: parent.height
+                height: width
+                radius: Theme.radiusControl
+                color: Theme.tileHover
+            }
+            Column {
+                width: parent.width - parent.height - Theme.space12
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: Theme.space8
+                SettingsText { text: "Now playing"; font.pixelSize: Theme.fontSm; font.weight: Theme.weightSemibold }
+                Rectangle { width: parent.width * 0.7; height: Theme.space8; radius: height / 2; color: Theme.tileHover }
+                Rectangle {
+                    width: parent.width
+                    height: Theme.space4
+                    radius: height / 2
+                    color: Theme.tile
+                    Rectangle { width: parent.width * 0.4; height: parent.height; radius: parent.radius; color: Theme.accent }
+                }
+            }
         }
     }
 

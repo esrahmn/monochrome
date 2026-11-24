@@ -10,7 +10,6 @@ import "../launcher"
 import "../media"
 import "../notifications"
 import "../power"
-import "../settings"
 import "../tray"
 import "../wallpaper"
 import "../../core"
@@ -36,7 +35,9 @@ Item {
     readonly property real widthTravel: widthReveal.travel
     readonly property bool toastMode: displayedPanel === "notifications"
     // Panels that fade their own contents in and out (Cascade) skip the block fade below.
-    readonly property bool selfReveal: displayedPanel === "media" || displayedPanel === "controlCenter"
+    // Notifications stay out: its toasts already animate themselves.
+    readonly property bool selfReveal: ["calendar", "media", "controlCenter", "launcher",
+        "clipboard", "emoji", "cheatsheet", "power", "tray", "wallpaper"].indexOf(displayedPanel) >= 0
     // Those panels also get a moment to play their contents out before the body closes around them.
     readonly property int closeHoldMs: 170
 
@@ -65,7 +66,6 @@ Item {
         case "media": return mediaComponent;
         case "controlCenter": return controlCenterComponent;
         case "launcher": return launcherComponent;
-        case "settings": return settingsComponent;
         case "clipboard": return clipboardComponent;
         case "emoji": return emojiComponent;
         case "cheatsheet": return cheatsheetComponent;
@@ -83,7 +83,6 @@ Item {
         case "media": Sys.mediaOpen = false; break;
         case "controlCenter": Sys.closeCC(); break;
         case "launcher": Sys.launcherMenuOpen = false; break;
-        case "settings": Sys.settingsOpen = false; break;
         case "clipboard": Sys.clipboardOpen = false; break;
         case "emoji": Sys.emojiOpen = false; break;
         case "cheatsheet": Sys.cheatOpen = false; break;
@@ -126,7 +125,6 @@ Item {
     Component { id: mediaComponent; MediaPanel { panelScreen: root.screenName } }
     Component { id: controlCenterComponent; ControlCenterPanel { panelScreen: root.screenName } }
     Component { id: launcherComponent; LauncherPanel { panelScreen: root.screenName } }
-    Component { id: settingsComponent; SettingsView { panelScreen: root.screenName } }
     Component { id: clipboardComponent; ClipboardPanel { panelScreen: root.screenName } }
     Component { id: emojiComponent; EmojiPanel { panelScreen: root.screenName } }
     Component { id: cheatsheetComponent; CheatsheetPanel { panelScreen: root.screenName } }

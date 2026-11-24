@@ -13,6 +13,9 @@ FocusScope {
     readonly property color settingsBarFill: Qt.rgba(0.11, 0.11, 0.11, 0.96)
     readonly property int settingsPadTop: 16
     readonly property int settingsSearchWidth: 240
+    readonly property int settingsNavRowHeight: 34
+    readonly property int settingsNavMark: 3
+    readonly property real settingsLabelTracking: 1.6
     readonly property int settingsSavedMs: 1700
     readonly property int settingsScrollbarWidth: 3
     readonly property int settingsScrollbarInset: 7
@@ -22,6 +25,13 @@ FocusScope {
 
     property string pageId: SettingsSchema.pages[0].id
     property var draft: ({})
+    // Set by SettingsView so the sections can stagger with the island reveal.
+    property bool panelShown: false
+
+    // Sidebar, header, search and page content come in one after another when the panel opens.
+    Cascade { id: stagger; open: root.panelShown; count: 4; step: 45 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
 
     property bool savedFlash: false
     Timer { id: savedTimer; interval: root.settingsSavedMs; onTriggered: root.savedFlash = false }
@@ -106,6 +116,9 @@ FocusScope {
 
     readonly property real contentW: Math.min(root.settingsContentMax, flick.width - root.settingsGutter * 2)
     readonly property real contentX: Math.max(root.settingsGutter, (flick.width - contentW) / 2)
+    // The header search shrinks with the window and disappears when there is no room left for the title.
+    readonly property int headerSearchWidth: Math.max(120, Math.min(root.settingsSearchWidth, Math.round(header.width * 0.32)))
+    readonly property bool headerSearchShown: header.width >= 420
 
     function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
@@ -345,7 +358,7 @@ FocusScope {
         property bool compact: false
 
         width: parent ? parent.width : 0
-        height: SettingsMetrics.settingsListRowHeight
+        height: compact ? root.settingsNavRowHeight : SettingsMetrics.settingsListRowHeight
 
         Connections {
             target: root
@@ -357,6 +370,17 @@ FocusScope {
             radius: Theme.radiusCard
             color: navRow.current ? Theme.tileHover : (navArea.containsMouse ? Theme.tile : Theme.transparent)
             Behavior on color { TweenColor { duration: Theme.durFast } }
+        }
+
+        // Marks the page that is open.
+        Rectangle {
+            visible: navRow.compact
+            anchors { left: parent.left; leftMargin: Theme.space4; verticalCenter: parent.verticalCenter }
+            width: root.settingsNavMark
+            height: navRow.current ? Theme.iconMd : 0
+            radius: width / 2
+            color: Theme.text
+            Behavior on height { Tween {} }
         }
 
         Rectangle {
@@ -443,11 +467,14 @@ FocusScope {
             id: header
             anchors { top: parent.top; left: sideNav.right; right: parent.right }
             height: root.settingsHeaderHeight
+            opacity: root.intro(1)
+            scale: 0.98 + 0.02 * stagger.back(1)
+            transform: Translate { y: root.rise(1) }
 
             Column {
                 id: titleCol
                 x: root.contentX + SettingsMetrics.settingsRowPadX
-                width: parent.width - x - root.settingsSearchWidth - Theme.iconXl - Theme.space8 - root.settingsGutter - Theme.space12 * 2
+                width: Math.max(0, (searchBox.visible ? searchBox.x - header.x : header.width - root.settingsGutter - Theme.iconXl - Theme.space8) - titleCol.x - Theme.space12)
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 0
 
@@ -479,12 +506,23 @@ FocusScope {
                 accessibleName: "Close"
                 onClicked: root.closeRequested()
             }
+
+            // Appears once the content has scrolled under the header.
+            Rectangle {
+                anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
+                height: Theme.borderThin
+                color: Theme.line
+                opacity: flick.contentY > 2 ? 1 : 0
+                Behavior on opacity { Tween {} }
+            }
         }
 
         Item {
             id: sideNav
             anchors { top: parent.top; bottom: parent.bottom; left: parent.left }
             width: root.settingsSideWidth
+            opacity: root.intro(0)
+            transform: Translate { y: root.rise(0) }
 
             Rectangle {
                 anchors { top: parent.top; bottom: parent.bottom; right: parent.right }
@@ -535,15 +573,16 @@ FocusScope {
                             id: sideSection
                             required property var modelData
                             width: sideSections.width
-                            spacing: Theme.space4
+                            spacing: Theme.space2
 
                             SettingsText {
                                 text: sideSection.modelData.title.toUpperCase()
                                 color: Theme.dim
                                 font.pixelSize: Theme.fontXs
                                 font.weight: Theme.weightSemibold
-                                font.letterSpacing: Theme.trackCaps
+                                font.letterSpacing: root.settingsLabelTracking
                                 leftPadding: SettingsMetrics.settingsRowPadX
+                                bottomPadding: Theme.space4
                             }
 
                             Repeater {
@@ -565,11 +604,16 @@ FocusScope {
 
         Rectangle {
             id: searchBox
+            opacity: root.intro(2)
+            transform: Translate { y: root.rise(2) }
+            visible: root.headerSearchShown
+            // Right edge on the content column, or left of the close button when the window is narrow.
+            x: flick.x + Math.min(root.contentX + root.contentW,
+                                  header.width - root.settingsGutter - (Theme.iconXl + Theme.space8) - Theme.space12) - width
             anchors {
                 top: parent.top; topMargin: (root.settingsHeaderHeight - SettingsMetrics.settingsSearchHeight) / 2
-                right: parent.right; rightMargin: root.settingsGutter + Theme.iconXl + Theme.space8 + Theme.space12
             }
-            width: root.settingsSearchWidth
+            width: root.headerSearchWidth
             height: SettingsMetrics.settingsSearchHeight
             radius: height / 2
             color: Theme.tile
@@ -637,7 +681,9 @@ FocusScope {
 
         Flickable {
             id: flick
-            anchors { top: header.bottom; topMargin: Theme.space12; bottom: parent.bottom; bottomMargin: Theme.space8; left: sideNav.right; right: parent.right }
+            opacity: root.intro(3)
+            transform: Translate { y: root.rise(3) }
+            anchors { top: header.bottom; bottom: parent.bottom; bottomMargin: Theme.space8; left: sideNav.right; right: parent.right }
             contentWidth: width
             contentHeight: content.height + root.settingsPadTop + root.settingsGutter * 2
                            + (root.barShown ? root.settingsBarHeight + Theme.space8 : Theme.space8)
@@ -744,7 +790,7 @@ FocusScope {
                             color: Theme.dim
                             font.pixelSize: Theme.fontXs
                             font.weight: Theme.weightSemibold
-                            font.letterSpacing: Theme.trackCaps
+                            font.letterSpacing: root.settingsLabelTracking
                             leftPadding: SettingsMetrics.settingsRowPadX
                         }
 

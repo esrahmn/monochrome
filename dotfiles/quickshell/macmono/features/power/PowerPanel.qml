@@ -35,6 +35,11 @@ Item {
         "key": "P"
     }]
 
+    // Buttons come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: root.panelActive; count: root.actions.length; step: 45 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     function run(action) {
         Sys.powerOpen = false;
         Sys.power(action);
@@ -97,6 +102,9 @@ Item {
 
                 width: 66
                 spacing: Theme.space4
+                opacity: root.intro(index)
+                scale: 0.94 + 0.06 * stagger.back(index)
+                transform: Translate { y: root.rise(index) }
 
                 Rectangle {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -106,6 +114,13 @@ Item {
                     color: actionCard.active || actionCard.hovered ? Theme.tileHover : Theme.tile
                     border.width: Theme.borderThin
                     border.color: actionCard.active ? Theme.text : Theme.line
+                    scale: hitArea.pressed ? 0.9 : actionCard.hovered ? 1.07 : 1
+                    Behavior on scale {
+                        Tween {
+                            duration: hitArea.pressed ? Theme.durPress : Theme.durBase
+                            easing.type: hitArea.pressed ? Theme.easeOut : Theme.easeSnappy
+                        }
+                    }
 
                     Glyph {
                         anchors.centerIn: parent
@@ -120,6 +135,7 @@ Item {
 
                         anchors.fill: parent
                         hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
                         onEntered: root.selectedIndex = actionCard.index
                         onClicked: root.run(actionCard.modelData.act)
                     }

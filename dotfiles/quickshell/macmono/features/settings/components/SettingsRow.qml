@@ -7,6 +7,7 @@ Item {
 
     readonly property int settingsFlashHoldMs: 450
     readonly property int settingsFlashFadeMs: 700
+    readonly property int settingsSubtitleMax: 460
     property string title: ""
     property string valueText: ""
     property string subtitle: ""
@@ -108,7 +109,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         text: row.resetLabel
                         font.pixelSize: Theme.fontSm
-                        color: resetArea.containsMouse ? Theme.text : Theme.faint
+                        color: resetArea.containsMouse ? Theme.text : Theme.dim
                         font.underline: resetArea.containsMouse
                     }
                     MouseArea {
@@ -135,7 +136,7 @@ Item {
 
         SettingsText {
             visible: row.subtitle !== ""
-            width: parent.width
+            width: Math.min(parent.width, row.settingsSubtitleMax)
             text: row.subtitle
             color: SettingsMetrics.settingsDescText
             font.pixelSize: Theme.fontSm

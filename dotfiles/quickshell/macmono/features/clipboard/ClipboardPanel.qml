@@ -23,6 +23,11 @@ Item {
     property var entries: []
     property bool loading: false
 
+    // Header, list and preview come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: win.shown; count: 3; step: 55 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     Component.onCompleted: if (Sys.clipboardOpen) root.reload()
 
     function parse(text) {
@@ -160,6 +165,9 @@ Item {
                     id: header
                     anchors { left: parent.left; right: parent.right; top: parent.top }
                     height: root.clipHeaderHeight
+                    opacity: root.intro(0)
+                    scale: 0.99 + 0.01 * stagger.back(0)
+                    transform: Translate { y: root.rise(0) }
 
                     Row {
                         anchors { left: parent.left; leftMargin: Theme.space16; verticalCenter: parent.verticalCenter }
@@ -255,6 +263,8 @@ Item {
                     width: root.clipListWidth
                     clip: true
                     spacing: Theme.space2
+                    opacity: root.intro(1)
+                    transform: Translate { y: root.rise(1) }
                     model: win.filtered
                     currentIndex: win.current
                     reuseItems: true
@@ -342,6 +352,9 @@ Item {
                 }
 
                 Item {
+                    id: detail
+                    opacity: root.intro(2)
+                    transform: Translate { y: root.rise(2) }
                     anchors { left: vline.right; right: parent.right; top: headerLine.bottom; bottom: parent.bottom; margins: Theme.space16 }
 
                     Item {

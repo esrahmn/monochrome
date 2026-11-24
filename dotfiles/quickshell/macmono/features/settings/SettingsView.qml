@@ -6,7 +6,8 @@ import "components"
 Item {
     id: root
     anchors.fill: parent
-    property string panelScreen: ""
+    // Set by SettingsWindow: this view now lives in a toplevel, not an island panel.
+    property bool windowShown: false
 
     readonly property int settingsWidth: 960
     readonly property int settingsHeight: 760
@@ -15,7 +16,7 @@ Item {
     Item {
         id: win
         anchors.fill: parent
-        readonly property bool shown: Sys.activePanel === "settings" && Sys.activePanelScreen === root.panelScreen
+        readonly property bool shown: root.windowShown
 
         Item {
             id: body
@@ -24,6 +25,7 @@ Item {
             SettingsPanel {
                 id: panel
                 anchors.fill: parent
+                panelShown: win.shown
                 onCloseRequested: Sys.settingsOpen = false
             }
         }

@@ -18,6 +18,31 @@ Item {
     property int viewYear: new Date().getFullYear()
     property int viewMonth: new Date().getMonth()
 
+    // Crossfade the outgoing month with the incoming one so the grid never goes blank.
+    readonly property int monthSlide: 36
+    property int monthSlideDir: 1
+    property real oldFade: 0
+    property real oldSlide: 0
+    property real newFade: 1
+    property real newSlide: 0
+    property var frozenCells: []
+    property string frozenTitle: ""
+    property bool crossfading: false
+
+    // Keep 4/5/6-week months from snapping the card height.
+    property real gridHeight: Math.ceil(cells.length / 7) * calendarDayHeight
+    Behavior on gridHeight {
+        Tween {
+            duration: Theme.durBase + 60
+            easing.type: Theme.easeOut
+        }
+    }
+
+    // Cards come in one after another when the panel opens, and go out in reverse order when it closes.
+    Cascade { id: stagger; open: root.shown; count: 2; step: 70 }
+    function intro(order) { return stagger.fade(order); }
+    function rise(order) { return Theme.staggerRise * (1 - stagger.fade(order)); }
+
     readonly property var cells: {
         const lead = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7;
         const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
@@ -36,16 +61,83 @@ Item {
         return out;
     }
 
+    function animateToMonth(year, month, dir) {
+        if (monthAnim.running)
+            return;
+
+        if (year === viewYear && month === viewMonth)
+            return;
+
+        frozenCells = cells;
+        frozenTitle = Qt.formatDate(new Date(viewYear, viewMonth, 1), "MMMM yyyy");
+        monthSlideDir = dir >= 0 ? 1 : -1;
+        oldFade = 1;
+        oldSlide = 0;
+        newFade = 0;
+        newSlide = monthSlideDir * monthSlide;
+        crossfading = true;
+        viewYear = year;
+        viewMonth = month;
+        monthAnim.restart();
+    }
+
     function shiftMonth(delta) {
         const d = new Date(viewYear, viewMonth + delta, 1);
-        viewYear = d.getFullYear();
-        viewMonth = d.getMonth();
+        animateToMonth(d.getFullYear(), d.getMonth(), delta);
     }
 
     function selectDate(d) {
         selectedDate = d;
-        viewYear = d.getFullYear();
-        viewMonth = d.getMonth();
+        if (d.getFullYear() !== viewYear || d.getMonth() !== viewMonth) {
+            const dir = (d.getFullYear() - viewYear) * 12 + d.getMonth() - viewMonth;
+            animateToMonth(d.getFullYear(), d.getMonth(), dir);
+        }
+    }
+
+    SequentialAnimation {
+        id: monthAnim
+
+        ParallelAnimation {
+            NumberAnimation {
+                target: root
+                property: "oldFade"
+                to: 0
+                duration: Theme.durFast + 30
+                easing.type: Theme.easeOut
+            }
+            NumberAnimation {
+                target: root
+                property: "oldSlide"
+                to: -root.monthSlideDir * root.monthSlide
+                duration: Theme.durBase + 40
+                easing.type: Theme.easeOut
+            }
+            SequentialAnimation {
+                PauseAnimation { duration: 70 }
+                NumberAnimation {
+                    target: root
+                    property: "newFade"
+                    to: 1
+                    duration: Theme.durBase
+                    easing.type: Theme.easeOut
+                }
+            }
+            NumberAnimation {
+                target: root
+                property: "newSlide"
+                to: 0
+                duration: Theme.durBase + 60
+                easing.type: Theme.easeOut
+            }
+        }
+        ScriptAction {
+            script: {
+                root.crossfading = false;
+                root.oldFade = 0;
+                root.newFade = 1;
+                root.newSlide = 0;
+            }
+        }
     }
 
     implicitWidth: calendarWidth
@@ -57,6 +149,12 @@ Item {
             return ;
 
         Sys.weather.ensureFresh();
+        monthAnim.stop();
+        crossfading = false;
+        oldFade = 0;
+        oldSlide = 0;
+        newFade = 1;
+        newSlide = 0;
         const d = new Date();
         viewYear = d.getFullYear();
         viewMonth = d.getMonth();
@@ -67,6 +165,12 @@ Item {
             return ;
 
         Sys.weather.ensureFresh();
+        monthAnim.stop();
+        crossfading = false;
+        oldFade = 0;
+        oldSlide = 0;
+        newFade = 1;
+        newSlide = 0;
         const d = new Date();
         viewYear = d.getFullYear();
         viewMonth = d.getMonth();
@@ -105,6 +209,9 @@ Item {
                         implicitHeight: wxCol.implicitHeight + Theme.space16 * 2
                         radius: Theme.radiusCard
                         color: Theme.tile
+                        opacity: root.intro(0)
+                        scale: 0.98 + 0.02 * stagger.back(0)
+                        transform: Translate { y: root.rise(0) }
 
                         ColumnLayout {
                             id: wxCol
@@ -243,6 +350,10 @@ Item {
                         implicitHeight: calCol.implicitHeight + Theme.space16 * 2
                         radius: Theme.radiusCard
                         color: Theme.tile
+                        opacity: root.intro(1)
+                        scale: 0.98 + 0.02 * stagger.back(1)
+                        transform: Translate { y: root.rise(1) }
+                        clip: true
 
                         ColumnLayout {
                             id: calCol
@@ -259,24 +370,37 @@ Item {
                             RowLayout {
                                 Layout.fillWidth: true
 
-                                Text {
+                                Item {
                                     Layout.fillWidth: true
-                                    text: Qt.formatDate(new Date(root.viewYear, root.viewMonth, 1), "MMMM yyyy")
-                                    color: Theme.text
-                                    font.family: Theme.font
-                                    font.pixelSize: Theme.fontLg
-                                    font.weight: Theme.weightSemibold
+                                    implicitHeight: titleNew.implicitHeight
+
+                                    Text {
+                                        id: titleNew
+                                        width: parent.width
+                                        text: Qt.formatDate(new Date(root.viewYear, root.viewMonth, 1), "MMMM yyyy")
+                                        opacity: root.crossfading ? root.newFade : 1
+                                        color: Theme.text
+                                        font.family: Theme.font
+                                        font.pixelSize: Theme.fontLg
+                                        font.weight: Theme.weightSemibold
+                                    }
+
+                                    Text {
+                                        width: parent.width
+                                        visible: root.crossfading
+                                        text: root.frozenTitle
+                                        opacity: root.oldFade
+                                        color: Theme.text
+                                        font.family: Theme.font
+                                        font.pixelSize: Theme.fontLg
+                                        font.weight: Theme.weightSemibold
+                                    }
 
                                     MouseArea {
                                         anchors.fill: parent
-                                        onClicked: {
-                                            const d = new Date();
-                                            root.viewYear = d.getFullYear();
-                                            root.viewMonth = d.getMonth();
-                                            root.selectedDate = d;
-                                        }
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.selectDate(new Date())
                                     }
-
                                 }
 
                                 Repeater {
@@ -313,77 +437,68 @@ Item {
 
                             }
 
-                            Grid {
-                                id: grid
+                            Column {
+                                Layout.fillWidth: true
+                                spacing: 0
 
-                                readonly property real cw: calCol.width / 7
+                                Grid {
+                                    id: weekRow
+                                    width: parent.width
+                                    columns: 7
 
-                                Layout.preferredWidth: calCol.width
-                                columns: 7
+                                    Repeater {
+                                        model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
-                                Repeater {
-                                    model: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
+                                        delegate: Text {
+                                            required property string modelData
 
-                                    delegate: Text {
-                                        required property string modelData
+                                            width: weekRow.width / 7
+                                            height: root.calendarWeekdayHeight
+                                            horizontalAlignment: Text.AlignHCenter
+                                            verticalAlignment: Text.AlignVCenter
+                                            text: modelData
+                                            color: Theme.faint
+                                            font.family: Theme.font
+                                            font.pixelSize: Theme.fontSm
+                                            font.weight: Theme.weightMedium
+                                        }
+                                    }
+                                }
 
-                                        width: grid.cw
-                                        height: root.calendarWeekdayHeight
-                                        horizontalAlignment: Text.AlignHCenter
-                                        verticalAlignment: Text.AlignVCenter
-                                        text: modelData
-                                        color: Theme.faint
-                                        font.family: Theme.font
-                                        font.pixelSize: Theme.fontSm
-                                        font.weight: Theme.weightMedium
+                                Item {
+                                    id: dateArea
+                                    width: parent.width
+                                    height: root.gridHeight
+                                    clip: true
+
+                                    CalendarMonth {
+                                        width: parent.width
+                                        cells: root.cells
+                                        selectedDate: root.selectedDate
+                                        cellWidth: weekRow.width / 7
+                                        dayHeight: root.calendarDayHeight
+                                        circleSize: root.calendarDayCircle
+                                        live: root.shown
+                                        opacity: root.crossfading ? root.newFade : 1
+                                        transform: Translate { x: root.newSlide }
+                                        onPicked: (d) => root.selectDate(d)
                                     }
 
+                                    CalendarMonth {
+                                        width: parent.width
+                                        cells: root.frozenCells
+                                        selectedDate: root.selectedDate
+                                        cellWidth: weekRow.width / 7
+                                        dayHeight: root.calendarDayHeight
+                                        circleSize: root.calendarDayCircle
+                                        live: root.shown
+                                        visible: root.crossfading
+                                        opacity: root.oldFade
+                                        transform: Translate { x: root.oldSlide }
+                                        onPicked: (d) => root.selectDate(d)
+                                    }
                                 }
-
-                                Repeater {
-                                    model: root.cells
-
-                                    delegate: Item {
-                                        id: dayCell
-
-                                        required property var modelData
-                                        readonly property bool isSelected: modelData.date.getFullYear() === root.selectedDate.getFullYear() && modelData.date.getMonth() === root.selectedDate.getMonth() && modelData.date.getDate() === root.selectedDate.getDate()
-
-                                        width: grid.cw
-                                        height: root.calendarDayHeight
-
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: root.calendarDayCircle
-                                            height: root.calendarDayCircle
-                                            radius: Math.min(width, height) / 2
-                                            color: dayArea.containsMouse && !isSelected ? Theme.tileHover : (isSelected ? Theme.accent : Theme.transparent)
-                                            border.width: modelData.today && !isSelected ? 1 : 0
-                                            border.color: Theme.accent
-                                        }
-
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: modelData.day
-                                            color: isSelected ? Theme.textOnAccent : (modelData.inMonth ? Theme.text : Theme.faint)
-                                            font.family: Theme.font
-                                            font.pixelSize: Theme.fontLg
-                                            font.weight: isSelected || modelData.today ? Theme.weightSemibold : Theme.weightRegular
-                                        }
-
-                                        MouseArea {
-                                            id: dayArea
-
-                                            anchors.fill: parent
-                                            hoverEnabled: true
-                                            onClicked: root.selectDate(dayCell.modelData.date)
-                                        }
-
-                                }
-
                             }
-
-                        }
 
                     }
 

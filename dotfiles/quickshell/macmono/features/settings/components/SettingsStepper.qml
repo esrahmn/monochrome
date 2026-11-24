@@ -42,7 +42,14 @@ Rectangle {
         radius: Theme.radiusControl - 1
         color: !atLimit && area.containsMouse ? Theme.tile : Theme.transparent
         opacity: atLimit ? Theme.opacityDisabled : 1
+        scale: atLimit ? 1 : area.pressed ? 0.9 : area.containsMouse ? 1.05 : 1
         Behavior on color { TweenColor { duration: Theme.durFast } }
+        Behavior on scale {
+            Tween {
+                duration: area.pressed ? Theme.durPress : Theme.durBase
+                easing.type: area.pressed ? Theme.easeOut : Theme.easeSnappy
+            }
+        }
 
         Rectangle {
             anchors.centerIn: parent
