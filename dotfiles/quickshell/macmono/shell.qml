@@ -1,4 +1,5 @@
 import Quickshell
+import "core"
 import "core/shortcuts"
 import "shared/services"
 import "features/lock"
@@ -15,7 +16,10 @@ ShellRoot {
     WallpaperPreview {}
     MenuBar {}
     Notifs {}
-    SettingsWindow {}
+    LazyLoader {
+        active: Sys.settingsOpen
+        component: SettingsWindow {}
+    }
     RegionSelector {}
     Shortcuts {}
     LockScreen {}

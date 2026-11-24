@@ -20,4 +20,9 @@ FloatingWindow {
     }
 
     onClosed: Sys.settingsOpen = false
+
+    // Unloaded by the LazyLoader in shell.qml as soon as Sys.settingsOpen goes
+    // false, so the panel never gets its revert() call. Restore live input
+    // previews here instead of leaving them applied.
+    Component.onDestruction: Sys.hyprSync.restoreInput()
 }

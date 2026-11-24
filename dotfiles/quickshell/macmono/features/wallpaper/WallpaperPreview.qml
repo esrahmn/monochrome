@@ -24,6 +24,11 @@ Scope {
                     if (!isOpen) {
                         swapAnim.stop();
                         win.swapT = 1;
+                        // Drop the decoded wallpapers once the close animation is
+                        // done; the window stays alive for the next open.
+                        imgA.source = "";
+                        imgB.source = "";
+                        win.shownPath = "";
                     }
                 }
             }
