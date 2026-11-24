@@ -15,6 +15,10 @@ build/
 *.user
 *.log
 
+# Python
+__pycache__/
+*.pyc
+
 # Local environment / secrets
 .env
 *.local
