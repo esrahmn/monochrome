@@ -96,7 +96,30 @@ Scope {
                 layer.enabled: Sys.wallpaperMono
                 layer.effect: MultiEffect { saturation: -1.0 }
 
-                WallMotion { id: swapMotion; t: win.swapT; dir: win.swapDir; span: win.width }
+                WallMotion { id: swapMotion; t: win.swapT; dir: win.swapDir; span: win.width; vspan: win.height }
+
+                // Same capsule wipe as the desktop wallpaper, so the preview
+                // matches what actually happens when a wallpaper is applied.
+                Item {
+                    id: wipeShapes
+                    anchors.fill: parent
+
+                    CandyWipe {
+                        anchors.fill: parent
+                        t: win.swapT
+                        dir: win.swapDir
+                        span: win.width
+                        vspan: win.height
+                    }
+                }
+                ShaderEffectSource {
+                    id: wipeTex
+                    sourceItem: wipeShapes
+                    hideSource: true
+                    live: true
+                    width: wipeShapes.width
+                    height: wipeShapes.height
+                }
 
                 Rectangle { anchors.fill: parent; color: Theme.scrim }
                 Image {
@@ -107,9 +130,14 @@ Scope {
                     cache: false
                     sourceSize.width: win.width
                     z: win.frontA ? 2 : 1
-                    opacity: win.frontA ? swapMotion.inOpacity : 1
+                    opacity: 1
                     scale: win.frontA ? swapMotion.inScale : swapMotion.outScale
-                    transform: Translate { x: win.frontA ? swapMotion.inX : swapMotion.outX }
+                    layer.enabled: Sys.wallpaperMono || (win.frontA && win.swapT < 1)
+                    layer.effect: MultiEffect {
+                        saturation: Sys.wallpaperMono ? -1.0 : 0.0
+                        maskEnabled: win.frontA && win.swapT < 1
+                        maskSource: wipeTex
+                    }
                     onStatusChanged: if (status === Image.Ready && !win.frontA) win.frontA = true
                 }
                 Image {
@@ -120,13 +148,17 @@ Scope {
                     cache: false
                     sourceSize.width: win.width
                     z: win.frontA ? 1 : 2
-                    opacity: win.frontA ? 1 : swapMotion.inOpacity
+                    opacity: 1
                     scale: win.frontA ? swapMotion.outScale : swapMotion.inScale
-                    transform: Translate { x: win.frontA ? swapMotion.outX : swapMotion.inX }
+                    layer.enabled: Sys.wallpaperMono || (!win.frontA && win.swapT < 1)
+                    layer.effect: MultiEffect {
+                        saturation: Sys.wallpaperMono ? -1.0 : 0.0
+                        maskEnabled: !win.frontA && win.swapT < 1
+                        maskSource: wipeTex
+                    }
                     onStatusChanged: if (status === Image.Ready && win.frontA) win.frontA = false
                 }
 
-                Rectangle { anchors.fill: parent; z: 1.5; color: "black"; opacity: win.swapT < 1 ? swapMotion.dip : 0 }
             }
         }
     }

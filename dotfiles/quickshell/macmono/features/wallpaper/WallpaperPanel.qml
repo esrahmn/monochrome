@@ -304,7 +304,8 @@ Item {
                     anchors.centerIn: parent
                     width: root.wpThumbWidth
                     height: root.wpThumbHeight
-                    radius: Theme.radiusCard
+                    // Capsule thumbs: the strip reads as one row of candy bars.
+                    radius: height / 2
                     color: Theme.tile
                     border.width: cell.picked ? 2 : 1
                     border.color: cell.picked ? Theme.text : Theme.line
@@ -335,9 +336,24 @@ Item {
                         layer.effect: MultiEffect { saturation: -1.0 }
                     }
 
+                    // Gloss: bright across the top, a thin bounce at the
+                    // bottom, so the capsule looks rounded instead of flat.
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: frame.radius
+                        opacity: cell.picked ? 1 : 0.65
+                        Behavior on opacity { Tween { duration: Theme.durFast } }
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#38ffffff" }
+                            GradientStop { position: 0.42; color: "#00ffffff" }
+                            GradientStop { position: 0.88; color: "#00ffffff" }
+                            GradientStop { position: 1.0; color: "#1cffffff" }
+                        }
+                    }
+
                     Rectangle {
                         visible: cell.live
-                        anchors.left: parent.left
+                        anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
                         anchors.margins: Theme.space8
                         width: curText.implicitWidth + 12

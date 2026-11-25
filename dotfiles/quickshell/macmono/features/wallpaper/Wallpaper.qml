@@ -109,17 +109,33 @@ Scope {
                     onFinished: wall.finish()
                 }
 
-                WallMotion { id: dimMotion; t: wall.incoming ? wall.incoming.reveal : 0; dir: wall.dir; span: bg.width }
-                Rectangle {
+                // Shapes behind the capsule wipe; masked into a texture so the
+                // incoming wallpaper is only painted where the pill is.
+                Item {
+                    id: wipeShapes
                     anchors.fill: parent
-                    z: 1.5
-                    color: "black"
-                    opacity: dimMotion.dip
+
+                    CandyWipe {
+                        anchors.fill: parent
+                        t: wall.incoming ? wall.incoming.reveal : 0
+                        dir: wall.dir
+                        span: bg.width
+                        vspan: bg.height
+                    }
+                }
+                ShaderEffectSource {
+                    id: wipeTex
+                    sourceItem: wipeShapes
+                    hideSource: true
+                    live: true
+                    width: wipeShapes.width
+                    height: wipeShapes.height
                 }
 
                 WallLayer {
                     id: layerA
                     partner: layerB
+                    wipeMask: wipeTex
                     dir: wall.dir
                     pixelWidth: Math.round(bg.width * wall.dpr)
                     pixelHeight: Math.round(bg.height * wall.dpr)
@@ -129,6 +145,7 @@ Scope {
                 WallLayer {
                     id: layerB
                     partner: layerA
+                    wipeMask: wipeTex
                     dir: wall.dir
                     pixelWidth: Math.round(bg.width * wall.dpr)
                     pixelHeight: Math.round(bg.height * wall.dpr)
